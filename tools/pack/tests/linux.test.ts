@@ -905,11 +905,14 @@ describe("writeLinuxBuilderConfig", () => {
 
       const builderConfig = JSON.parse(await readFile(paths.appBuilderConfigPath, "utf8")) as {
         linux: { target: string[] };
-        rpm?: { packageName: string; license: string };
+        rpm?: { packageName: string; fpm: string[] };
         deb?: unknown;
       };
       expect(builderConfig.linux.target).toEqual(["rpm"]);
-      expect(builderConfig.rpm).toEqual({ packageName: "open-design", license: "Apache-2.0" });
+      expect(builderConfig.rpm).toEqual({
+        packageName: "open-design",
+        fpm: ["--license", "Apache-2.0"],
+      });
       // Explicit targets only: --to rpm must not leak the deb block (and
       // --to all never produces an rpm; resolveLinuxBuilderTargets owns that).
       expect(builderConfig.deb).toBeUndefined();

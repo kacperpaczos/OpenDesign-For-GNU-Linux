@@ -881,17 +881,22 @@ export async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: Lin
       : {}),
     // RPM package metadata. Only consulted when the `rpm` target is built. The
     // `Name:` tag must be lowercase without spaces (rpm convention), so it comes
-    // from RPM_PACKAGE_NAME instead of the productName. `license` fills the rpm
-    // License tag (fpm would otherwise emit "unknown"); everything else —
-    // summary/description, maintainer, release — electron-builder derives from
-    // the shared linux block above. Deliberately minimal (community target,
-    // build-only): no per-distro `requires` tuning yet, exactly like deb's
-    // explicit-target-only contract — `--to all` never produces an rpm.
+    // from RPM_PACKAGE_NAME instead of the productName. The License tag is set
+    // through the fpm passthrough (`--license`), the same mechanism the deb
+    // block uses: electron-builder 26.8.1's rpm config schema has no `license`
+    // key (it validates and rejects one), and its FpmTarget only falls back to
+    // the packaged app's package.json `license` field, which the assembled app
+    // does not carry — without the flag fpm emits `License: unknown`.
+    // Everything else — summary/description, maintainer, release —
+    // electron-builder derives from the shared linux block above. Deliberately
+    // minimal (community target, build-only): no per-distro `requires` tuning
+    // yet, exactly like deb's explicit-target-only contract — `--to all` never
+    // produces an rpm.
     ...(isRpm
       ? {
           rpm: {
             packageName: RPM_PACKAGE_NAME,
-            license: "Apache-2.0",
+            fpm: ["--license", "Apache-2.0"],
           },
         }
       : {}),
