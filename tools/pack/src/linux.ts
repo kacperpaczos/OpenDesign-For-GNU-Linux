@@ -45,6 +45,17 @@ const execFileAsync = promisify(execFile);
 const PRODUCT_NAME = "Open Design";
 const APP_IMAGE_PRODUCT_NAME = "Open-Design";
 const DESKTOP_LOG_ECHO_ENV = "OD_DESKTOP_LOG_ECHO";
+// Must mirror WEB_STANDALONE_RESOURCE_NAME in mac/constants.ts: the packaged
+// web sidecar resolves its standalone tree from
+// `join(process.resourcesPath, "open-design-web-standalone")` (see
+// resolvePackagedWebStandaloneRoot in apps/packaged/src/config.ts), so the
+// after-pack hook must materialize the tree under exactly this resources
+// subdirectory name. Duplicated locally rather than imported across the
+// mac/ platform lane boundary, matching PRODUCT_NAME above.
+const WEB_STANDALONE_RESOURCE_NAME = "open-design-web-standalone";
+// Same hook-config env contract the shared mac/win after-pack hook uses
+// (WEB_STANDALONE_HOOK_CONFIG_ENV in mac/constants.ts).
+const WEB_STANDALONE_HOOK_CONFIG_ENV = "OD_TOOLS_PACK_WEB_STANDALONE_HOOK_CONFIG";
 // The containerized build sets this to the standalone pnpm binary fetched by
 // buildDockerArgs; runProductionInstall reads it to avoid invoking `npm` inside
 // `electronuserland/builder:base`, which strips npm/npx/corepack.
@@ -376,6 +387,8 @@ export type LinuxPaths = {
   packagedConfigPath: string;
   resourceRoot: string;
   tarballsRoot: string;
+  webStandaloneHookAuditPath: string;
+  webStandaloneHookConfigPath: string;
 };
 
 function appImageInstallName(namespace: string): string {
@@ -417,6 +430,9 @@ export function resolveLinuxPaths(config: ToolPackConfig): LinuxPaths {
     packagedConfigPath: join(namespaceRoot, "open-design-config.json"),
     resourceRoot: join(namespaceRoot, "resources", "open-design"),
     tarballsRoot: join(namespaceRoot, "tarballs"),
+    // Same file names/convention as the mac lane's hook paths (mac/paths.ts).
+    webStandaloneHookAuditPath: join(namespaceRoot, "web-standalone-after-pack-audit.json"),
+    webStandaloneHookConfigPath: join(namespaceRoot, "web-standalone-after-pack-config.json"),
   };
 }
 
@@ -564,6 +580,12 @@ async function writeAssembledApp(
         appVersion: version,
         namespace: config.namespace,
         nodeCommandRelative: "open-design/bin/node",
+        // The packaged app reads this to decide the web sidecar's launch mode
+        // (OD_WEB_OUTPUT_MODE / OD_WEB_STANDALONE_ROOT spawn env in
+        // apps/packaged/src/sidecars.ts) and to default webStandaloneRoot to
+        // <resourcesPath>/open-design-web-standalone, matching mac/win
+        // packaged configs which always carry webOutputMode.
+        webOutputMode: config.webOutputMode,
         ...(config.telemetryRelayUrl == null ? {} : { telemetryRelayUrl: config.telemetryRelayUrl }),
         ...(config.posthogKey == null ? {} : { posthogKey: config.posthogKey }),
         ...(config.posthogHost == null ? {} : { posthogHost: config.posthogHost }),
@@ -585,6 +607,76 @@ async function writeLinuxAppImageAppRun(paths: LinuxPaths): Promise<void> {
   await mkdir(dirname(paths.appImageAppRunPath), { recursive: true });
   await writeFile(paths.appImageAppRunPath, renderLinuxAppImageAppRun(), "utf8");
   await chmod(paths.appImageAppRunPath, 0o755);
+}
+
+// --- Web standalone runtime (after-pack materialization) ---
+
+// Mirrors the mac/win lanes' assertWebStandaloneOutput with the same error
+// clarity: without a traced standalone server the packaged web sidecar has no
+// bootable entry, so the build must fail before electron-builder runs.
+async function assertWebStandaloneOutput(config: ToolPackConfig): Promise<void> {
+  const webRoot = join(config.workspaceRoot, "apps", "web");
+  const standaloneSourceRoot = join(webRoot, ".next", "standalone");
+  const candidates = [
+    join(standaloneSourceRoot, "apps", "web", "server.js"),
+    join(standaloneSourceRoot, "server.js"),
+  ];
+
+  for (const candidate of candidates) {
+    if (await pathExists(candidate)) return;
+  }
+
+  throw new Error("Next.js standalone server output was not produced under apps/web/.next/standalone");
+}
+
+// Exported for tests (mirrors the mac/win hook-config writers). Writes the
+// config consumed by resources/linux/web-standalone-after-pack.cjs through
+// WEB_STANDALONE_HOOK_CONFIG_ENV during the electron-builder run.
+export async function writeWebStandaloneHookConfig(config: ToolPackConfig, paths: LinuxPaths): Promise<string> {
+  const webRoot = join(config.workspaceRoot, "apps", "web");
+  await assertWebStandaloneOutput(config);
+
+  await mkdir(dirname(paths.webStandaloneHookConfigPath), { recursive: true });
+  await writeFile(
+    paths.webStandaloneHookConfigPath,
+    `${JSON.stringify(
+      {
+        auditReportPath: paths.webStandaloneHookAuditPath,
+        resourceName: WEB_STANDALONE_RESOURCE_NAME,
+        standaloneSourceRoot: join(webRoot, ".next", "standalone"),
+        version: 1,
+        webPublicSourceRoot: join(webRoot, "public"),
+        webStaticSourceRoot: join(webRoot, ".next", "static"),
+        workspaceRoot: config.workspaceRoot,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  return paths.webStandaloneHookConfigPath;
+}
+
+// Post-build sanity check mirroring the mac lane's packaged-sidecar runtime
+// assertions: every Linux electron-builder target (dir/deb/rpm/AppImage)
+// stages the unpacked app at <output>/linux-unpacked first, so the hook's
+// materialized tree must be visible there with a server entry before the
+// build can be reported as successful.
+async function assertLinuxWebStandaloneResource(paths: LinuxPaths): Promise<void> {
+  const resourceRoot = join(paths.appBuilderOutputRoot, "linux-unpacked", "resources", WEB_STANDALONE_RESOURCE_NAME);
+  const candidates = [
+    join(resourceRoot, "apps", "web", "server.js"),
+    join(resourceRoot, "server.js"),
+  ];
+
+  for (const candidate of candidates) {
+    if (await pathExists(candidate)) return;
+  }
+
+  throw new Error(
+    `packaged web standalone runtime is missing a server entry under ${resourceRoot}; ` +
+    "the linux web-standalone after-pack hook did not materialize the Next.js standalone tree",
+  );
 }
 
 // --- Step 5: writeLinuxBuilderConfig helper ---
@@ -737,6 +829,13 @@ export async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: Lin
     appId: "io.open-design.desktop",
     artifactName: `${PRODUCT_NAME}-${namespaceToken}.\${ext}`,
     asar: false,
+    // Materialize the web standalone runtime into the packaged resources after
+    // the app is packed (mirrors the mac lane's afterPack registration; the
+    // hook reads its inputs from WEB_STANDALONE_HOOK_CONFIG_ENV, passed to the
+    // electron-builder run in runElectronBuilderLinux).
+    ...(config.webOutputMode === "standalone"
+      ? { afterPack: linuxResources.webStandaloneAfterPackHook }
+      : {}),
     buildDependenciesFromSource: false,
     compression: "maximum",
     directories: {
@@ -917,7 +1016,11 @@ export async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: Lin
 
 // --- Step 6: runElectronBuilderLinux + findBuiltAppImage helpers ---
 
-async function runElectronBuilderLinux(config: ToolPackConfig, paths: LinuxPaths): Promise<void> {
+async function runElectronBuilderLinux(
+  config: ToolPackConfig,
+  paths: LinuxPaths,
+  webStandaloneHookConfigPath: string | null,
+): Promise<void> {
   await rm(paths.appBuilderOutputRoot, { force: true, recursive: true });
   const args = [
     config.electronBuilderCliPath,
@@ -931,7 +1034,12 @@ async function runElectronBuilderLinux(config: ToolPackConfig, paths: LinuxPaths
   ];
   await execFileAsync(process.execPath, args, {
     cwd: config.workspaceRoot,
-    env: process.env,
+    env: {
+      ...process.env,
+      ...(webStandaloneHookConfigPath == null
+        ? {}
+        : { [WEB_STANDALONE_HOOK_CONFIG_ENV]: webStandaloneHookConfigPath }),
+    },
   });
 }
 
@@ -991,8 +1099,14 @@ export async function packLinux(config: ToolPackConfig): Promise<LinuxPackResult
   if (linuxBuildsAppImage(config.to)) {
     await writeLinuxAppImageAppRun(paths);
   }
+  const webStandaloneHookConfigPath = config.webOutputMode === "standalone"
+    ? await writeWebStandaloneHookConfig(config, paths)
+    : null;
   await writeLinuxBuilderConfig(config, paths);
-  await runElectronBuilderLinux(config, paths);
+  await runElectronBuilderLinux(config, paths, webStandaloneHookConfigPath);
+  if (config.webOutputMode === "standalone") {
+    await assertLinuxWebStandaloneResource(paths);
+  }
 
   const appImagePath = linuxBuildsAppImage(config.to) ? await findBuiltAppImage(paths) : null;
   const debPath = config.to === "deb" ? await findBuiltArtifact(paths, ".deb") : null;
