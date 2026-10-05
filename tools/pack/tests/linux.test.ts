@@ -58,6 +58,7 @@ import {
   buildDockerArgs,
   cleanupPackedLinuxNamespace,
   createLinuxDesktopLaunchEnv,
+  findBuiltArtifact,
   inspectPackedLinuxApp,
   LINUX_APPIMAGE_EXECUTABLE_ARGS,
   linuxBuildsAppImage,
@@ -68,11 +69,13 @@ import {
   renderLinuxAppImageAppRun,
   renderLinuxPackagedMainEntry,
   resolveLinuxLifecycleMode,
+  resolveLinuxPaths,
   resolveProductionInstallCommand,
   shouldRejectLinuxHeadlessInspectOptions,
   stopPackedLinuxApp,
   sanitizeNamespace,
   stopPackedLinuxHeadless,
+  writeLinuxBuilderConfig,
 } from "@/linux.js";
 
 async function pathExists(path: string): Promise<boolean> {
@@ -855,6 +858,10 @@ describe("resolveLinuxBuilderTargets", () => {
     expect(resolveLinuxBuilderTargets("deb")).toEqual(["deb"]);
   });
 
+  it("maps rpm to the electron-builder rpm target", () => {
+    expect(resolveLinuxBuilderTargets("rpm")).toEqual(["rpm"]);
+  });
+
   it("maps dir to an unpacked build", () => {
     expect(resolveLinuxBuilderTargets("dir")).toEqual(["dir"]);
   });
@@ -866,11 +873,98 @@ describe("resolveLinuxBuilderTargets", () => {
 });
 
 describe("linuxBuildsAppImage", () => {
-  it("is true only for appimage/all so deb and dir skip the AppRun wrapper", () => {
+  it("is true only for appimage/all so deb, rpm, and dir skip the AppRun wrapper", () => {
     expect(linuxBuildsAppImage("appimage")).toBe(true);
     expect(linuxBuildsAppImage("all")).toBe(true);
     expect(linuxBuildsAppImage("deb")).toBe(false);
+    expect(linuxBuildsAppImage("rpm")).toBe(false);
     expect(linuxBuildsAppImage("dir")).toBe(false);
+  });
+});
+
+describe("writeLinuxBuilderConfig", () => {
+  it("generates the rpm target and rpm identity for --to rpm", async () => {
+    const root = await mkdtemp(join(tmpdir(), "od-linux-rpm-config-"));
+    try {
+      const config: ToolPackConfig = {
+        ...makeConfig(),
+        to: "rpm",
+        appVersion: "0.24.1",
+        roots: {
+          ...makeConfig().roots,
+          output: {
+            ...makeConfig().roots.output,
+            namespaceRoot: join(root, "out", "linux", "namespaces", "default"),
+            appBuilderRoot: join(root, "out", "linux", "namespaces", "default", "builder"),
+          },
+        },
+      };
+      const paths = resolveLinuxPaths(config);
+
+      await writeLinuxBuilderConfig(config, paths);
+
+      const builderConfig = JSON.parse(await readFile(paths.appBuilderConfigPath, "utf8")) as {
+        linux: { target: string[] };
+        rpm?: { packageName: string; license: string };
+        deb?: unknown;
+      };
+      expect(builderConfig.linux.target).toEqual(["rpm"]);
+      expect(builderConfig.rpm).toEqual({ packageName: "open-design", license: "Apache-2.0" });
+      // Explicit targets only: --to rpm must not leak the deb block (and
+      // --to all never produces an rpm; resolveLinuxBuilderTargets owns that).
+      expect(builderConfig.deb).toBeUndefined();
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+});
+
+describe("findBuiltArtifact", () => {
+  it("locates the built .rpm in the electron-builder output directory", async () => {
+    const root = await mkdtemp(join(tmpdir(), "od-linux-rpm-artifact-"));
+    try {
+      const config: ToolPackConfig = {
+        ...makeConfig(),
+        roots: {
+          ...makeConfig().roots,
+          output: {
+            ...makeConfig().roots.output,
+            appBuilderRoot: join(root, "out", "linux", "namespaces", "default", "builder"),
+          },
+        },
+      };
+      const paths = resolveLinuxPaths(config);
+      await mkdir(paths.appBuilderOutputRoot, { recursive: true });
+      const rpmPath = join(paths.appBuilderOutputRoot, "Open Design-default.rpm");
+      await writeFile(rpmPath, "rpm-bytes");
+
+      expect(await findBuiltArtifact(paths, ".rpm")).toBe(rpmPath);
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+
+  it("returns null when the output directory holds no .rpm", async () => {
+    const root = await mkdtemp(join(tmpdir(), "od-linux-rpm-artifact-empty-"));
+    try {
+      const config: ToolPackConfig = {
+        ...makeConfig(),
+        roots: {
+          ...makeConfig().roots,
+          output: {
+            ...makeConfig().roots.output,
+            appBuilderRoot: join(root, "out", "linux", "namespaces", "default", "builder"),
+          },
+        },
+      };
+      const paths = resolveLinuxPaths(config);
+      await mkdir(paths.appBuilderOutputRoot, { recursive: true });
+      await writeFile(join(paths.appBuilderOutputRoot, "Open Design-default.AppImage"), "appimage-bytes");
+
+      expect(await findBuiltArtifact(paths, ".rpm")).toBeNull();
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
   });
 });
 

@@ -97,6 +97,7 @@ Local lifecycle commands:
 - `tools-pack linux build --to all` (default; produces AppImage)
 - `tools-pack linux build --to appimage` (explicit AppImage)
 - `tools-pack linux build --to deb` (standards-compliant Debian package; build target only — no install/start/stop lifecycle smoke)
+- `tools-pack linux build --to rpm` (community RPM package; build target only — no install/start/stop lifecycle smoke; same explicit-target-only identity caveat as deb, so `--to all` never produces it)
 - `tools-pack linux build --to dir` (unpacked output for fast iteration)
 - `tools-pack linux build --containerized` (run electron-builder inside `electronuserland/builder:base` Docker for a wider glibc compatibility target — requires Docker)
 - `tools-pack linux build --to all --portable` (release artifacts that must not bake local tools-pack runtime paths)
@@ -171,7 +172,7 @@ Verified smoke coverage in this repository currently includes:
 
 ### Format choice: why AppImage first
 
-Linux desktop apps in this space split across formats: VS Code ships `.deb` + `.rpm` + Snap; Discord ships AppImage + `.deb`; Slack ships `.deb` + `.rpm`; Cursor and Obsidian ship AppImage. We started with AppImage because one artifact can cover the widest glibc-compatible target without distro repositories, store packaging, signing infrastructure, or per-format install scripts, and it integrates cleanly with the namespace-scoped install layout. A standards-compliant `.deb` target is now also supported (`--to deb`); `.rpm` / Snap / Flatpak can still land incrementally when user demand justifies the extra release ownership.
+Linux desktop apps in this space split across formats: VS Code ships `.deb` + `.rpm` + Snap; Discord ships AppImage + `.deb`; Slack ships `.deb` + `.rpm`; Cursor and Obsidian ship AppImage. We started with AppImage because one artifact can cover the widest glibc-compatible target without distro repositories, store packaging, signing infrastructure, or per-format install scripts, and it integrates cleanly with the namespace-scoped install layout. A standards-compliant `.deb` target and a community `.rpm` target are now also supported (`--to deb` / `--to rpm`); Snap / Flatpak can still land incrementally when user demand justifies the extra release ownership.
 
 ### Out of scope (later phases)
 
@@ -181,7 +182,7 @@ Linux desktop apps in this space split across formats: VS Code ships `.deb` + `.
   - the tools-pack lifecycle (`install`/`start`/`stop`) and its smoke coverage stay **AppImage-only** — there is no `dpkg -i` acceptance smoke yet (planned);
   - the release pipeline (`tools/release`), CI, and the landing page are **not** wired for `.deb` in this increment (release-lane wiring is a separate change);
   - package **signing** and an **APT repository** remain deferred (GPG key + hosting decision).
-- `.rpm` is the planned next increment — `linux.maintainer` is already rpm-ready — but needs its own per-distro `depends`/section and `rpmlint` + install validation, so it is deferred rather than shipped untested.
+- `.rpm` build is supported via `--to rpm` — a minimal community target (lowercase `open-design` package name, `License: Apache-2.0`, maintainer from the shared `linux.maintainer`). Like `.deb` it is **build-only**: no `rpmlint` pass, no `rpm -i` install smoke, and the release pipeline is not wired for it yet.
 - Snap, Flatpak — deferred until there is demand and an owner for per-distro metadata, signing/store/repository plumbing, install/remove hooks, and release validation.
 - Full Linux AppImage PR smoke remains release-lane only; PR validation runs the Linux headless packaged smoke because it does not require a display server.
 
