@@ -141,7 +141,7 @@ export function buildDockerArgs(
   //   - config.namespace is sanitized at config-time by resolveNamespace() in
   //     @open-design/sidecar-proto (restricted to namespace charset)
   //   - config.to is enum-validated by resolveToolPackBuildOutput() in config.ts
-  //     to one of "all" | "appimage" | "deb" | "dir"
+  //     to one of "all" | "appimage" | "deb" | "dir" | "rpm"
   //   - config.portable is a boolean
   //   - config.appVersion is shell-quoted below because release versions can
   //     carry punctuation that is not part of the namespace / target enums.
@@ -361,7 +361,8 @@ export function matchesAppImageProcess(
 
 // --- Step 1: LinuxPaths type and resolveLinuxPaths ---
 
-type LinuxPaths = {
+// Exported for tests (mirrors the mac module's exported paths resolver).
+export type LinuxPaths = {
   appBuilderConfigPath: string;
   appBuilderOutputRoot: string;
   appImageAppRunPath: string;
@@ -389,7 +390,7 @@ function iconFileName(namespace: string): string {
   return `open-design-${sanitizeNamespace(namespace)}.png`;
 }
 
-function resolveLinuxPaths(config: ToolPackConfig): LinuxPaths {
+export function resolveLinuxPaths(config: ToolPackConfig): LinuxPaths {
   const namespaceRoot = config.roots.output.namespaceRoot;
   const appBuilderOutputRoot = config.roots.output.appBuilderRoot;
   const home = homedir();
@@ -589,17 +590,20 @@ async function writeLinuxAppImageAppRun(paths: LinuxPaths): Promise<void> {
 // --- Step 5: writeLinuxBuilderConfig helper ---
 
 // Maps the tools-pack `--to` target to the electron-builder Linux target list.
-// "dir" produces an unpacked tree, "deb" a Debian package, and everything else
-// ("appimage"/"all") an AppImage — the historical default.
+// "dir" produces an unpacked tree, "deb" a Debian package, "rpm" an RPM package,
+// and everything else ("appimage"/"all") an AppImage — the historical default.
 //
 // Note: on Linux `all` == AppImage only, which is intentionally NOT symmetric with
-// Windows (`all` == dir+nsis+zip). The deb build is a SEPARATE electron-builder run:
-// its productName ("OpenDesign", for a path-safe /opt) is mutually exclusive with
-// the AppImage's ("Open Design"), so they cannot be produced in one combined run.
-// `all` therefore stays AppImage-only; build the deb explicitly with `--to deb`.
+// Windows (`all` == dir+nsis+zip). The deb and rpm builds are SEPARATE electron-builder
+// runs: the deb's productName ("OpenDesign", for a path-safe /opt) is mutually exclusive
+// with the AppImage's ("Open Design"), and distro-package targets are explicit-only by
+// policy so `all` keeps producing exactly the historical AppImage artifact.
+// `all` therefore stays AppImage-only; build the deb with `--to deb` and the
+// rpm with `--to rpm`.
 export function resolveLinuxBuilderTargets(to: ToolPackConfig["to"]): string[] {
   if (to === "dir") return ["dir"];
   if (to === "deb") return ["deb"];
+  if (to === "rpm") return ["rpm"];
   return ["AppImage"];
 }
 
@@ -619,6 +623,13 @@ export function linuxBuildsAppImage(to: ToolPackConfig["to"]): boolean {
 const DEB_PACKAGE_NAME = "open-design";
 const DEB_PRODUCT_NAME = "OpenDesign";
 const DEB_DISPLAY_NAME = "Open Design";
+
+// RPM archive package name. An rpm `Name:` must be lowercase with no spaces
+// (rpm convention), mirroring the DEB_PACKAGE_NAME rationale; unlike deb, this
+// is the only identity rpm needs from us — the display identity stays the
+// shared `productName`, and the maintainer contact comes from the shared
+// `linux.maintainer` field, which electron-builder feeds to rpmbuild.
+const RPM_PACKAGE_NAME = "open-design";
 
 // electron-builder ships no machine-readable copyright (lintian: no-copyright-file,
 // an error) and an auto-generated changelog that lintian rejects as "not a Debian
@@ -698,7 +709,8 @@ export function linuxBundledFilePatterns(hostArch: string): string[] {
   ];
 }
 
-async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: LinuxPaths): Promise<void> {
+// Exported for tests (mirrors the mac module's exported builder-config writer).
+export async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: LinuxPaths): Promise<void> {
   const target = resolveLinuxBuilderTargets(config.to);
   const buildsAppImage = linuxBuildsAppImage(config.to);
   const namespaceToken = sanitizeNamespace(config.namespace);
@@ -709,6 +721,10 @@ async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: LinuxPaths
   // names must be path-safe (no space). The AppImage keeps "Open Design" because
   // matchesAppImageProcess and the AppRun wrapper match that exact binary name.
   const isDeb = config.to === "deb";
+  // rpm keeps the shared "Open Design" product/executable identity: its distro
+  // package name is carried entirely by the `rpm.packageName` field below, so
+  // the executable must not be renamed for path-safety the way deb's is.
+  const isRpm = config.to === "rpm";
   const linuxProductName = isDeb ? DEB_PRODUCT_NAME : PRODUCT_NAME;
   const linuxExecutableName = isDeb ? DEB_PACKAGE_NAME : PRODUCT_NAME;
   const debMeta = isDeb ? await writeDebMetadataFiles(paths, packageVersion) : null;
@@ -863,6 +879,22 @@ async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: LinuxPaths
           },
         }
       : {}),
+    // RPM package metadata. Only consulted when the `rpm` target is built. The
+    // `Name:` tag must be lowercase without spaces (rpm convention), so it comes
+    // from RPM_PACKAGE_NAME instead of the productName. `license` fills the rpm
+    // License tag (fpm would otherwise emit "unknown"); everything else —
+    // summary/description, maintainer, release — electron-builder derives from
+    // the shared linux block above. Deliberately minimal (community target,
+    // build-only): no per-distro `requires` tuning yet, exactly like deb's
+    // explicit-target-only contract — `--to all` never produces an rpm.
+    ...(isRpm
+      ? {
+          rpm: {
+            packageName: RPM_PACKAGE_NAME,
+            license: "Apache-2.0",
+          },
+        }
+      : {}),
     // Keep the AppImage launch fallback explicit. Our top-level AppRun wrapper
     // clears ELECTRON_RUN_AS_NODE before these Chromium flags reach Electron,
     // including for AppImageLauncher-generated desktop entries.
@@ -898,7 +930,8 @@ async function runElectronBuilderLinux(config: ToolPackConfig, paths: LinuxPaths
   });
 }
 
-async function findBuiltArtifact(paths: LinuxPaths, ext: string): Promise<string | null> {
+// Exported for tests (shared lookup for the AppImage/.deb/.rpm builder outputs).
+export async function findBuiltArtifact(paths: LinuxPaths, ext: string): Promise<string | null> {
   if (!(await pathExists(paths.appBuilderOutputRoot))) return null;
   const entries = await readdir(paths.appBuilderOutputRoot);
   const match = entries.find((entry) => entry.endsWith(ext));
@@ -914,6 +947,7 @@ async function findBuiltAppImage(paths: LinuxPaths): Promise<string | null> {
 export type LinuxPackResult = {
   appImagePath: string | null;
   debPath: string | null;
+  rpmPath: string | null;
   outputRoot: string;
   resourceRoot: string;
   runtimeNamespaceRoot: string;
@@ -927,9 +961,11 @@ export async function packLinux(config: ToolPackConfig): Promise<LinuxPackResult
     const paths = resolveLinuxPaths(config);
     const appImagePath = linuxBuildsAppImage(config.to) ? await findBuiltAppImage(paths) : null;
     const debPath = config.to === "deb" ? await findBuiltArtifact(paths, ".deb") : null;
+    const rpmPath = config.to === "rpm" ? await findBuiltArtifact(paths, ".rpm") : null;
     return {
       appImagePath,
       debPath,
+      rpmPath,
       outputRoot: paths.appBuilderOutputRoot,
       resourceRoot: paths.resourceRoot,
       runtimeNamespaceRoot: config.roots.runtime.namespaceRoot,
@@ -955,6 +991,7 @@ export async function packLinux(config: ToolPackConfig): Promise<LinuxPackResult
 
   const appImagePath = linuxBuildsAppImage(config.to) ? await findBuiltAppImage(paths) : null;
   const debPath = config.to === "deb" ? await findBuiltArtifact(paths, ".deb") : null;
+  const rpmPath = config.to === "rpm" ? await findBuiltArtifact(paths, ".rpm") : null;
   if (linuxBuildsAppImage(config.to)) {
     if (appImagePath == null) throw new Error('Linux build did not produce an AppImage to verify');
     await assertLinuxAppImageNativeModules(appImagePath);
@@ -962,6 +999,7 @@ export async function packLinux(config: ToolPackConfig): Promise<LinuxPackResult
   return {
     appImagePath,
     debPath,
+    rpmPath,
     outputRoot: paths.appBuilderOutputRoot,
     resourceRoot: paths.resourceRoot,
     runtimeNamespaceRoot: config.roots.runtime.namespaceRoot,
