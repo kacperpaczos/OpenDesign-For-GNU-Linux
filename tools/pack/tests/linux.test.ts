@@ -60,8 +60,11 @@ import {
   createLinuxDesktopLaunchEnv,
   inspectPackedLinuxApp,
   LINUX_APPIMAGE_EXECUTABLE_ARGS,
+  linuxBuildsAppImage,
+  linuxBundledFilePatterns,
   matchesAppImageProcess,
   renderDesktopTemplate,
+  resolveLinuxBuilderTargets,
   renderLinuxAppImageAppRun,
   renderLinuxPackagedMainEntry,
   resolveLinuxLifecycleMode,
@@ -778,6 +781,96 @@ describe("resolveLinuxLifecycleMode", () => {
     expect(resolveLinuxLifecycleMode({}, "stop")).toBe("appimage");
     expect(resolveLinuxLifecycleMode({}, "uninstall")).toBe("appimage");
     expect(resolveLinuxLifecycleMode({}, "cleanup")).toBe("appimage");
+  });
+});
+
+describe("linuxBundledFilePatterns", () => {
+  // Paths as they appear in the assembled app, relative to its root.
+  const bundledCruft = [
+    "node_modules/@ffmpeg-installer/ffmpeg/index.js~",
+    "node_modules/@ffmpeg-installer/ffmpeg/lib/manifest.js~",
+    "node_modules/node-pty/prebuilds/win32-x64/pty.node",
+    "node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper",
+    "node_modules/onnxruntime-node/bin/napi-v3/darwin/x64/libonnxruntime.1.21.1.dylib",
+    "node_modules/onnxruntime-node/bin/napi-v3/win32/arm64/onnxruntime_binding.node",
+    "node_modules/onnxruntime-node/bin/napi-v3/linux/x64/libonnxruntime_providers_cuda.so",
+    "node_modules/onnxruntime-node/bin/napi-v3/linux/x64/libonnxruntime_providers_tensorrt.so",
+  ];
+  const linuxX64Runtime = [
+    "node_modules/node-pty/prebuilds/linux-x64/pty.node",
+    "node_modules/onnxruntime-node/bin/napi-v3/linux/x64/onnxruntime_binding.node",
+    "node_modules/onnxruntime-node/bin/napi-v3/linux/x64/libonnxruntime.so.1",
+    "node_modules/onnxruntime-node/bin/napi-v3/linux/x64/libonnxruntime_providers_shared.so",
+    "node_modules/@ffmpeg-installer/ffmpeg/index.js",
+  ];
+
+  // Mirrors electron-builder's `files` semantics closely enough for these
+  // patterns: the last matching rule wins, `!` negates.
+  function bundled(patterns: string[], file: string): boolean {
+    let keep = false;
+    for (const pattern of patterns) {
+      const negated = pattern.startsWith("!");
+      const glob = negated ? pattern.slice(1) : pattern;
+      if (globMatches(glob, file)) keep = !negated;
+    }
+    return keep;
+  }
+  function expandBraces(glob: string): string[] {
+    const match = /\{([^{}]*)\}/.exec(glob);
+    if (!match) return [glob];
+    return match[1]
+      .split(",")
+      .flatMap((alt) => expandBraces(glob.slice(0, match.index) + alt + glob.slice(match.index + match[0].length)));
+  }
+  function globMatches(glob: string, file: string): boolean {
+    return expandBraces(glob).some((variant) => {
+      const source = variant
+        .split(/(\*\*\/|\*\*|\*)/)
+        .map((part) => (part === "**/" ? "(?:.*/)?" : part === "**" ? ".*" : part === "*" ? "[^/]*" : escape(part)))
+        .join("");
+      return new RegExp(`^${source}$`).test(file);
+    });
+  }
+  function escape(value: string): string {
+    return value.replace(/[.+^$()|[\]\\?]/g, "\\$&");
+  }
+
+  it("drops foreign-platform binaries, GPU providers and backup files on x64", () => {
+    const patterns = linuxBundledFilePatterns("x64");
+    for (const file of bundledCruft) expect(bundled(patterns, file), file).toBe(false);
+    for (const file of linuxX64Runtime) expect(bundled(patterns, file), file).toBe(true);
+    expect(bundled(patterns, "node_modules/onnxruntime-node/bin/napi-v3/linux/arm64/libonnxruntime.so.1")).toBe(false);
+  });
+
+  it("keeps the arm64 linux runtime and drops x64 when building on arm64", () => {
+    const patterns = linuxBundledFilePatterns("arm64");
+    expect(bundled(patterns, "node_modules/onnxruntime-node/bin/napi-v3/linux/arm64/libonnxruntime.so.1")).toBe(true);
+    expect(bundled(patterns, "node_modules/onnxruntime-node/bin/napi-v3/linux/x64/libonnxruntime.so.1")).toBe(false);
+    expect(bundled(patterns, "node_modules/onnxruntime-node/bin/napi-v3/linux/arm64/libonnxruntime_providers_cuda.so")).toBe(false);
+  });
+});
+
+describe("resolveLinuxBuilderTargets", () => {
+  it("maps deb to the electron-builder deb target", () => {
+    expect(resolveLinuxBuilderTargets("deb")).toEqual(["deb"]);
+  });
+
+  it("maps dir to an unpacked build", () => {
+    expect(resolveLinuxBuilderTargets("dir")).toEqual(["dir"]);
+  });
+
+  it("defaults appimage and all to AppImage", () => {
+    expect(resolveLinuxBuilderTargets("appimage")).toEqual(["AppImage"]);
+    expect(resolveLinuxBuilderTargets("all")).toEqual(["AppImage"]);
+  });
+});
+
+describe("linuxBuildsAppImage", () => {
+  it("is true only for appimage/all so deb and dir skip the AppRun wrapper", () => {
+    expect(linuxBuildsAppImage("appimage")).toBe(true);
+    expect(linuxBuildsAppImage("all")).toBe(true);
+    expect(linuxBuildsAppImage("deb")).toBe(false);
+    expect(linuxBuildsAppImage("dir")).toBe(false);
   });
 });
 
