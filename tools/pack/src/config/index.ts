@@ -201,10 +201,14 @@ function defaultNamespaceForAppVersion(platform: ToolPackPlatform, appVersion: s
   return releaseNamespace(channel, platform);
 }
 
-function resolveToolPackWebOutputMode(platform: ToolPackPlatform, value: string | undefined): ToolPackWebOutputMode {
-  // Standalone web output is wired for desktop packaged platforms; Linux stays on
-  // the existing server output until its AppImage resource path is optimized.
-  if (platform === "linux") return "server";
+function resolveToolPackWebOutputMode(_platform: ToolPackPlatform, value: string | undefined): ToolPackWebOutputMode {
+  // Every packaged platform — mac, win, and linux — boots its packaged web
+  // sidecar from the Next.js standalone tree materialized into packaged
+  // resources by the platform after-pack hook. Linux previously stayed pinned
+  // to server mode, where the sidecar loads next.config.ts from the packaged
+  // @open-design/web package and dies on workspace-root file reads that do not
+  // exist outside the repo (the packaged web sidecar exit-1 / app exit-75
+  // failure on every Linux package).
   if (value == null || value.length === 0) return "standalone";
   if (value === "server" || value === "standalone") return value;
   throw new Error(`unsupported OD_WEB_OUTPUT_MODE value: ${value}`);
