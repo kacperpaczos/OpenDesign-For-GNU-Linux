@@ -843,6 +843,10 @@ async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: LinuxPaths
               // so declare it explicitly (lintian: missing-dependency-on-libc).
               "libc6",
               "libgtk-3-0 | libgtk-3-0t64",
+              // Chromium links these directly (Ozone GPU + ALSA audio); the
+              // electron-builder baseline omits them like it omits libc6.
+              "libgbm1",
+              "libasound2 | libasound2t64",
               "libnotify4",
               "libnss3",
               "libxss1",
