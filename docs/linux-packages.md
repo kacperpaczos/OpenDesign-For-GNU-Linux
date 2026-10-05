@@ -10,7 +10,7 @@ Workflow `.github/workflows/linux-packages.yml`:
 
 1. codziennie o 03:41 UTC (i na żądanie) wyznacza najnowszy tag upstreamu pasujący do `open-design-v*`;
 2. jeśli na forku istnieje już wydanie o nazwie `<tag>-linux`, nic nie robi;
-3. w przeciwnym razie zakłada gałąź `linux-build` na tagu upstreamu i nanosi naszą serię przez cherry-pick z zakresu `$(cat packaging/linux/SERIES-BASE)..linux-packages-0.24.1`. **Konflikt oznacza, że upstream przepisał łatany obszar** — workflow przerywa pracę z czytelnym komunikatem i trzeba przeciąć serię ręcznie (punkt (b) niżej);
+3. w przeciwnym razie zakłada gałąź `linux-build` na tagu upstreamu i nanosi naszą serię przez cherry-pick z zakresu `"$(grep -v '^#' packaging/linux/SERIES-BASE | sed -n '1p')"..linux-packages-0.24.1`. **Konflikt oznacza, że upstream przepisał łatany obszar** — workflow przerywa pracę z czytelnym komunikatem i trzeba przeciąć serię ręcznie (punkt (b) niżej);
 4. buduje `.deb`, potem `.rpm` (sekwencyjnie, jeden runner); Flatpak buduje osobno, jako best-effort — jego porażka nie blokuje deb/rpm ani wydania;
 5. publikuje wydanie `<tag>-linux` ze wszystkimi artefaktami i notką (co nałożono, jak instalować, znane zastrzeżenia).
 
@@ -43,8 +43,10 @@ git checkout -B linux-packages-0.25.0 open-design-v0.25.0
 
 ### 3. Nałóż serię łatek
 
+Plik `packaging/linux/SERIES-BASE` ma w pierwszej linii komentarz — trzeba go odfiltrować, bo inaczej git dostanie zły zakres:
+
 ```bash
-git cherry-pick $(cat packaging/linux/SERIES-BASE)..linux-packages-0.24.1
+git cherry-pick "$(grep -v '^#' packaging/linux/SERIES-BASE | sed -n '1p')"..linux-packages-0.24.1
 ```
 
 Konflikty rozwiązuj zgodnie z **intencją łatki** (co miała osiągnąć), a nie mechanicznie. Jeśli upstream usunął lub przepisał łatany obszar, zastanów się najpierw, czy łatka jest wciąż potrzebna — może problem naprawiono po swojej stronie.
@@ -96,7 +98,7 @@ git push -u origin linux-packages-0.25.0
 
 Push aktualizuje forka; jeśli nowa gałąź ma zostać domyślną, zmień ją w ustawieniach forka. Kolejne uruchomienie workflow użyje nowej serii.
 
-**Uwaga:** workflow czyta nazwę gałęzi serii ze zmiennej `SERIES_BRANCH` na górze `.github/workflows/linux-packages.yml` (obecnie `linux-packages-0.24.1`). Przy przecięciu serii na gałąź o innej nazwie zmień tę wartość **w tym samym czasie** co `SERIES-BASE` — jedno miejsce w pliku, obie prace (`build` i `flatpak`) czytają tę zmienną.
+**Uwaga:** workflow czyta nazwę gałęzi serii ze zmiennej `SERIES_BRANCH` na górze `.github/workflows/linux-packages.yml` (obecnie `linux-packages-0.24.1`). Przy przecięciu serii na gałąź o innej nazwie zmień tę wartość **w tym samym czasie** co `SERIES-BASE` — jedno miejsce w pliku, obie prace (`build` i `flatpak`) czytają tę zmienną. Notki wydania także czytają te dwa źródła (`SERIES-BASE` i `SERIES_BRANCH`), więc po aktualizacji obu nie trzeba nic poprawiać w heredocu z treścią notek — podmienią się same.
 
 ## Znane zastrzeżenia
 

@@ -54,15 +54,17 @@ jobs:
             TAG="$(git ls-remote --tags --sort=-v:refname https://github.com/nexu-io/open-design 'open-design-v*' \
               | cut -f2 \
               | grep -v '\^{}$' \
-              | head -n1 \
+              | sed -n '1p' \
               | sed 's|^refs/tags/||')"
           fi
           if [ -z "$TAG" ]; then
             echo "::error::No upstream tag resolved (empty ls-remote result or empty input)"
             exit 1
           fi
+          # The release job creates "<tag>-linux", so the skip gate must look
+          # for that exact release name, not the raw upstream tag.
           NEW=true
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          if gh release view "${TAG}-linux" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             NEW=false
           fi
           echo "Resolved tag: $TAG (new release needed: $NEW)"
@@ -102,7 +104,7 @@ jobs:
           git remote add upstream https://github.com/nexu-io/open-design.git
           git fetch --depth 1 upstream "refs/tags/${TAG}:refs/tags/${TAG}"
           # SERIES-BASE carries one comment line; strip it for the range.
-          BASE="$(grep -v '^#' packaging/linux/SERIES-BASE | head -n1)"
+          BASE="$(grep -v '^#' packaging/linux/SERIES-BASE | sed -n '1p')"
           echo "Patch series range: ${BASE}..origin/${SERIES_BRANCH}"
           git checkout -B linux-build "refs/tags/${TAG}"
           if ! git cherry-pick "${BASE}..origin/${SERIES_BRANCH}"; then
@@ -179,7 +181,7 @@ jobs:
           git config user.email "linux-packages-bot@users.noreply.github.com"
           git remote add upstream https://github.com/nexu-io/open-design.git
           git fetch --depth 1 upstream "refs/tags/${TAG}:refs/tags/${TAG}"
-          BASE="$(grep -v '^#' packaging/linux/SERIES-BASE | head -n1)"
+          BASE="$(grep -v '^#' packaging/linux/SERIES-BASE | sed -n '1p')"
           echo "Patch series range: ${BASE}..origin/${SERIES_BRANCH}"
           git checkout -B linux-build "refs/tags/${TAG}"
           if ! git cherry-pick "${BASE}..origin/${SERIES_BRANCH}"; then
@@ -234,6 +236,10 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAG: ${{ needs.detect.outputs.tag }}
     steps:
+      # Shallow checkout: the release notes read packaging/linux/SERIES-BASE
+      # so they follow SERIES-BASE/SERIES_BRANCH on a re-cut instead of going stale.
+      - uses: actions/checkout@v6
+
       - name: Download deb and rpm
         uses: actions/download-artifact@v4
         with:
@@ -266,12 +272,15 @@ jobs:
             echo "Release ${TAG}-linux already exists — skipping creation."
             exit 0
           fi
+          BASE="$(grep -v '^#' packaging/linux/SERIES-BASE | sed -n '1p')"
           {
             echo "Community Linux packages for upstream ${TAG}."
             echo
+            # Series branch/base are parameterized so a re-cut (SERIES-BASE +
+            # SERIES_BRANCH update) refreshes the notes without edits here.
+            echo "**Patch series:** branch \`${SERIES_BRANCH}\`, cut from upstream tag \`${BASE}\`, applied via cherry-pick."
+            echo
             cat <<'NOTES'
-          **Patch series:** branch `linux-packages-0.24.1`, cut from upstream tag `open-design-v0.24.1`, applied via cherry-pick.
-
           ### Applied on top of the upstream tag
 
           - Native module install policy and validation (upstream PR #7979)
