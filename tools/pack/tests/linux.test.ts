@@ -76,7 +76,9 @@ import {
   sanitizeNamespace,
   stopPackedLinuxHeadless,
   writeLinuxBuilderConfig,
+  writeWebStandaloneHookConfig,
 } from "@/linux.js";
+import { linuxResources } from "@/resources/index.js";
 
 async function pathExists(path: string): Promise<boolean> {
   try {
@@ -1136,5 +1138,144 @@ describe("matchesAppImageProcess", () => {
       installPath,
     );
     expect(ok).toBe(false);
+  });
+});
+
+describe("resolveLinuxPaths web standalone hook paths", () => {
+  it("places the hook config and audit report under the namespace root like the mac lane", () => {
+    const paths = resolveLinuxPaths(makeConfig());
+
+    expect(paths.webStandaloneHookConfigPath).toBe(
+      "/work/.tmp/tools-pack/out/linux/namespaces/default/web-standalone-after-pack-config.json",
+    );
+    expect(paths.webStandaloneHookAuditPath).toBe(
+      "/work/.tmp/tools-pack/out/linux/namespaces/default/web-standalone-after-pack-audit.json",
+    );
+  });
+});
+
+describe("writeWebStandaloneHookConfig", () => {
+  async function writeStandaloneFixture(workspaceRoot: string): Promise<void> {
+    const serverPath = join(
+      workspaceRoot,
+      "apps",
+      "web",
+      ".next",
+      "standalone",
+      "apps",
+      "web",
+      "server.js",
+    );
+    await mkdir(dirname(serverPath), { recursive: true });
+    await writeFile(serverPath, "// standalone server fixture\n", "utf8");
+  }
+
+  function configWithWorkspace(workspaceRoot: string, root?: string): ToolPackConfig {
+    const outputNamespaceRoot = root == null
+      ? makeConfig().roots.output.namespaceRoot
+      : join(root, "out", "linux", "namespaces", "default");
+    return {
+      ...makeConfig(),
+      containerized: false,
+      webOutputMode: "standalone",
+      workspaceRoot,
+      roots: {
+        ...makeConfig().roots,
+        output: {
+          ...makeConfig().roots.output,
+          namespaceRoot: outputNamespaceRoot,
+          appBuilderRoot: join(outputNamespaceRoot, "builder"),
+        },
+      },
+    };
+  }
+
+  it("throws with the shared mac/win clarity when no standalone server was produced", async () => {
+    const root = await mkdtemp(join(tmpdir(), "od-linux-webstandalone-missing-"));
+    try {
+      // The throw happens before any file is written, so the unreachable
+      // /work-shaped default roots do not matter for this assertion.
+      await expect(writeWebStandaloneHookConfig(configWithWorkspace(root), resolveLinuxPaths(configWithWorkspace(root))))
+        .rejects.toThrow("Next.js standalone server output was not produced under apps/web/.next/standalone");
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+
+  it("writes the hook config consumed by the linux after-pack hook", async () => {
+    const root = await mkdtemp(join(tmpdir(), "od-linux-webstandalone-config-"));
+    try {
+      await writeStandaloneFixture(root);
+      const config = configWithWorkspace(root, root);
+      const paths = resolveLinuxPaths(config);
+
+      const configPath = await writeWebStandaloneHookConfig(config, paths);
+      expect(configPath).toBe(paths.webStandaloneHookConfigPath);
+
+      const hookConfig = JSON.parse(await readFile(configPath, "utf8")) as Record<string, unknown>;
+      expect(hookConfig).toEqual({
+        auditReportPath: paths.webStandaloneHookAuditPath,
+        // Must equal the packaged app's resolvePackagedWebStandaloneRoot default.
+        resourceName: "open-design-web-standalone",
+        standaloneSourceRoot: join(root, "apps", "web", ".next", "standalone"),
+        version: 1,
+        webPublicSourceRoot: join(root, "apps", "web", "public"),
+        webStaticSourceRoot: join(root, "apps", "web", ".next", "static"),
+        workspaceRoot: root,
+      });
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+});
+
+describe("writeLinuxBuilderConfig web standalone", () => {
+  function configWithRoot(root: string, overrides: Partial<ToolPackConfig> = {}): ToolPackConfig {
+    return {
+      ...makeConfig(),
+      ...overrides,
+      roots: {
+        ...makeConfig().roots,
+        output: {
+          ...makeConfig().roots.output,
+          namespaceRoot: join(root, "out", "linux", "namespaces", "default"),
+          appBuilderRoot: join(root, "out", "linux", "namespaces", "default", "builder"),
+        },
+      },
+    };
+  }
+
+  it("registers the linux web-standalone after-pack hook for standalone builds", async () => {
+    const root = await mkdtemp(join(tmpdir(), "od-linux-buildercfg-standalone-"));
+    try {
+      const config = configWithRoot(root, { appVersion: "0.24.1", webOutputMode: "standalone" });
+      const paths = resolveLinuxPaths(config);
+
+      await writeLinuxBuilderConfig(config, paths);
+
+      const builderConfig = JSON.parse(await readFile(paths.appBuilderConfigPath, "utf8")) as {
+        afterPack?: string;
+      };
+      expect(builderConfig.afterPack).toBe(linuxResources.webStandaloneAfterPackHook);
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+
+  it("omits the after-pack hook for server-mode builds", async () => {
+    const root = await mkdtemp(join(tmpdir(), "od-linux-buildercfg-server-"));
+    try {
+      const config = configWithRoot(root, { appVersion: "0.24.1", webOutputMode: "server" });
+      const paths = resolveLinuxPaths(config);
+
+      await writeLinuxBuilderConfig(config, paths);
+
+      const builderConfig = JSON.parse(await readFile(paths.appBuilderConfigPath, "utf8")) as {
+        afterPack?: string;
+      };
+      expect(builderConfig.afterPack).toBeUndefined();
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
   });
 });

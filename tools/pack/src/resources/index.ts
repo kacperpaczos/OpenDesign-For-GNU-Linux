@@ -61,6 +61,11 @@ export const linuxResources = {
   debianCopyright: join(resourcesRoot, "linux", "debian", "copyright"),
   debianChangelogTemplate: join(resourcesRoot, "linux", "debian", "changelog.template"),
   debianLintianOverrides: join(resourcesRoot, "linux", "debian", "lintian-overrides"),
+  // Linux counterpart of the shared mac/win web-standalone after-pack hook.
+  // Lives under linux/ (not the shared resources root) because the Linux lane
+  // materializes a self-contained standalone tree without the mac/win pruning,
+  // hyperframes-copy, and code-signing steps.
+  webStandaloneAfterPackHook: join(resourcesRoot, "linux", "web-standalone-after-pack.cjs"),
 } as const;
 
 const BUNDLED_RESOURCE_TREES = [
