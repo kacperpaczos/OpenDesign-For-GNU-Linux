@@ -700,8 +700,9 @@ export function resolveLinuxBuilderTargets(to: ToolPackConfig["to"]): string[] {
 }
 
 // The AppRun wrapper and its extraFiles injection are AppImage-only concerns.
-// deb/dir builds must not receive them: a .deb installs Electron directly under
-// /opt and symlinks the executable into /usr/bin, with no FUSE AppRun shim.
+// deb/rpm/dir builds must not receive them: a .deb installs Electron directly
+// under /opt and symlinks the executable into /usr/bin, with no FUSE AppRun
+// shim — and the rpm and dir targets likewise ship the plain unpacked tree.
 export function linuxBuildsAppImage(to: ToolPackConfig["to"]): boolean {
   return to === "all" || to === "appimage";
 }
@@ -947,9 +948,10 @@ export async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: Lin
             artifactName: "open-design_${version}_${arch}.deb",
             // Runtime shared libraries for an Electron 41 app. electron-builder's
             // defaults already resolve on Debian, but we spell out the intent and
-            // alternate the two libraries renamed by the time_t 64-bit (t64)
+            // alternate the three libraries renamed by the time_t 64-bit (t64)
             // transition so resolution never relies solely on compat `Provides:`:
             //   - libgtk-3-0     -> libgtk-3-0t64     (trixie+/sid)
+            //   - libasound2     -> libasound2t64     (trixie+/sid)
             //   - libatspi2.0-0  -> libatspi2.0-0t64  (trixie+/sid)
             // Verified installable on bookworm (native names) and trixie/sid.
             depends: [
@@ -995,6 +997,13 @@ export async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: Lin
       ? {
           rpm: {
             packageName: RPM_PACKAGE_NAME,
+            // Release filename `<pkg>_<version>_<arch>.rpm`, mirroring the deb
+            // block's artifactName style: electron-builder substitutes ${version}
+            // and ${arch} itself (x86_64 for rpm), so the release-notes glob
+            // ./open-design_*.rpm matches the actual file. Without this override
+            // the default name keeps the display product name — "Open Design"
+            // with a space — which no install glob above can address.
+            artifactName: "open-design_${version}_${arch}.rpm",
             fpm: ["--license", "Apache-2.0"],
           },
         }
