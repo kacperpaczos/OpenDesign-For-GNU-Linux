@@ -348,3 +348,43 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "OpenDesign Linux — ${TAG}" \
             --notes-file release-notes.md
+
+  # Keep the GitHub Pages landing page pointing at the newest release: after
+  # every published tag this job rewrites latest.json on the gh-pages branch.
+  # The page prefers this file over the GitHub API (no rate limits, instant).
+  update-pages:
+    name: Update site download links
+    needs: [detect, release]
+    if: needs.detect.outputs.new == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Rewrite latest.json on gh-pages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.detect.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch gh-pages \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" pages
+          cd pages
+          VERSION="${TAG#open-design-v}"
+          BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}-linux"
+          cat > latest.json <<JSON
+          {
+            "tag": "${TAG}",
+            "html_url": "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}-linux",
+            "assets": {
+              "open-design_${VERSION}_amd64.deb": "${BASE}/open-design_${VERSION}_amd64.deb",
+              "open-design_${VERSION}_x86_64.rpm": "${BASE}/open-design_${VERSION}_x86_64.rpm",
+              "open-design.flatpak": "${BASE}/open-design.flatpak"
+            }
+          }
+          JSON
+          git config user.name "linux-packages bot"
+          git config user.email "linux-packages-bot@users.noreply.github.com"
+          git add latest.json
+          git diff --cached --quiet && { echo "latest.json unchanged"; exit 0; }
+          git commit -m "pages: point download links at ${TAG}"
+          git push origin gh-pages
