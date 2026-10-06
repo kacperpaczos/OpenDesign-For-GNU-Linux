@@ -938,6 +938,12 @@ export async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: Lin
               debMeta.changelogPath,
               `${debMeta.copyrightPath}=/usr/share/doc/${DEB_PACKAGE_NAME}/copyright`,
               `${debMeta.lintianOverridesPath}=/usr/share/lintian/overrides/${DEB_PACKAGE_NAME}`,
+              // Relocate the icon from the undeclared hicolor/1024x1024 into
+              // the declared 512x512 context (Icon Theme Specification lookup
+              // never sees undeclared size directories — the menu entry would
+              // render iconless).
+              "--after-install",
+              linuxResources.desktopIconFixup,
             ],
             // Debian-standard filename `<package>_<version>_<arch>.deb`. The
             // namespace is intentionally omitted (unlike the AppImage artifact):
@@ -1013,7 +1019,7 @@ export async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: Lin
               // the deb lane needs nothing equivalent (its identity is
               // already space-free).
               "--after-install",
-              linuxResources.rpmAfterInstall,
+              linuxResources.desktopIconFixup,
             ],
           },
         }

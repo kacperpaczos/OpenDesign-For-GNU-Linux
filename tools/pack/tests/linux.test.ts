@@ -924,7 +924,7 @@ describe("writeLinuxBuilderConfig", () => {
           // Post-install fixup: the rpm entry/icon keep the spaced product
           // name, which KDE cannot resolve as an icon-theme name.
           "--after-install",
-          expect.stringContaining("rpm-after-install.sh"),
+          expect.stringContaining("desktop-icon-fixup.sh"),
         ],
       });
       // The referenced script must ship with the checkout (fpm runs it at
