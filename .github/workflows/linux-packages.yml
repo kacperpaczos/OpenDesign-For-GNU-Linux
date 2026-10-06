@@ -323,7 +323,23 @@ jobs:
           - Flatpak manifest and launcher (`packaging/flatpak/io.open-design.desktop.json`)
           - Web standalone runtime shipped inside Linux packages
 
-          ### Install
+          ### Install — one-liner per package (curl or wget; resolves, verifies and installs)
+
+          ```bash
+          # Debian / Ubuntu (.deb)
+          curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s deb
+          wget -qO- https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s deb
+
+          # Fedora / RHEL (.rpm)
+          curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s rpm
+          wget -qO- https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s rpm
+
+          # Flatpak (single-file bundle, user install)
+          curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s flatpak
+          wget -qO- https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s flatpak
+          ```
+
+          ### Or install an already-downloaded package
 
           ```bash
           # Debian / Ubuntu
