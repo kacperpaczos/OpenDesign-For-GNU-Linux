@@ -6,29 +6,45 @@
 <title>OpenDesign for GNU/Linux — community packages</title>
 <meta name="description" content="Community deb/rpm/Flatpak packages of OpenDesign, built automatically from every stable upstream release.">
 <style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; margin: 0; }
-  body { background:#0b0d12; color:#e7e9ee; font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; min-height:100vh; display:flex; flex-direction:column; }
-  .hero { max-width:880px; margin:0 auto; padding:72px 24px 40px; text-align:center; }
+  :root {
+    --bg:#0b0d12; --fg:#e7e9ee; --muted:#9aa3b2; --dim:#8b93a3; --faint:#6f7889;
+    --card:#141822; --line:#2a3040; --line2:#1c2230; --accent:#7aa2ff; --accent2:#9d7aff;
+    --term:#0f1218; --termmuted:#8b93a3; color-scheme:dark;
+  }
+  html[data-theme="light"] {
+    --bg:#f7f8fb; --fg:#171a21; --muted:#5a6272; --dim:#6b7382; --faint:#838b9a;
+    --card:#ffffff; --line:#d9dde6; --line2:#e7eaf1; --accent:#2f5fe0; --accent2:#7a3fe0;
+    --term:#f0f2f7; --termmuted:#6b7382; color-scheme:light;
+  }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; min-height:100vh; display:flex; flex-direction:column; transition:background .2s,color .2s; }
+  .top { max-width:920px; margin:0 auto; padding:22px 24px 0; display:flex; justify-content:flex-end; width:100%; }
+  .theme { cursor:pointer; border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:999px; padding:5px 14px; font-size:14px; }
+  .hero { max-width:880px; margin:0 auto; padding:40px 24px 32px; text-align:center; }
   h1 { font-size:clamp(28px,5vw,44px); letter-spacing:-.02em; }
-  h1 span { background:linear-gradient(90deg,#7aa2ff,#9d7aff); -webkit-background-clip:text; background-clip:text; color:transparent; }
-  .sub { color:#9aa3b2; margin:14px auto 30px; max-width:640px; }
-  .badge { display:inline-block; font-size:13px; color:#7aa2ff; border:1px solid #2a3040; border-radius:999px; padding:3px 12px; margin-bottom:18px; }
-  .grid { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin:26px 0 8px; }
-  .btn { display:flex; flex-direction:column; gap:2px; min-width:210px; padding:16px 22px; border-radius:12px; border:1px solid #2a3040; background:#141822; color:#e7e9ee; text-decoration:none; transition:border-color .15s, transform .15s; }
-  .btn:hover { border-color:#7aa2ff; transform:translateY(-2px); }
-  .btn b { font-size:17px; } .btn small { color:#8b93a3; }
-  .term { max-width:760px; margin:26px auto; text-align:left; background:#0f1218; border:1px solid #2a3040; border-radius:12px; overflow:hidden; }
-  .term header { padding:8px 14px; color:#8b93a3; font-size:13px; border-bottom:1px solid #1c2230; display:flex; justify-content:space-between; }
-  .term pre { padding:16px 18px; overflow-x:auto; font:14px/1.5 ui-monospace,Menlo,Consolas,monospace; color:#c7d0dd; }
-  .term .c { color:#6f7889; }
-  .note { color:#8b93a3; font-size:14px; }
-  footer { margin-top:auto; padding:30px 24px; text-align:center; color:#6f7889; font-size:14px; }
-  footer a { color:#9aa3b2; }
-  a { color:#7aa2ff; }
+  h1 span { background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .sub { color:var(--muted); margin:14px auto 26px; max-width:660px; }
+  .badge { display:inline-block; font-size:13px; color:var(--accent); border:1px solid var(--line); border-radius:999px; padding:3px 12px; margin-bottom:18px; }
+  .ver { color:var(--muted); font-size:14px; margin-bottom:6px; }
+  .grid { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin:14px 0 6px; }
+  .card { text-align:left; min-width:250px; padding:16px 18px; border-radius:12px; border:1px solid var(--line); background:var(--card); }
+  .card h2 { font-size:17px; display:flex; gap:8px; align-items:center; }
+  .card .meta { color:var(--dim); font-size:14px; margin:2px 0 10px; }
+  .btn { display:inline-block; padding:8px 16px; border-radius:9px; border:1px solid var(--line); background:var(--bg); color:var(--fg); text-decoration:none; font-size:14px; }
+  .btn:hover { border-color:var(--accent); }
+  .term { text-align:left; background:var(--term); border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-top:10px; }
+  .term pre { padding:12px 14px; overflow-x:auto; font:13px/1.5 ui-monospace,Menlo,Consolas,monospace; color:var(--fg); white-space:pre; }
+  .term pre .c { color:var(--termmuted); }
+  .note { color:var(--dim); font-size:14px; }
+  .cols { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; max-width:880px; margin:0 auto; padding:0 24px; }
+  .col { flex:1 1 260px; text-align:left; }
+  footer { margin-top:auto; padding:30px 24px; text-align:center; color:var(--faint); font-size:14px; }
+  footer a, .note a { color:var(--muted); }
+  a { color:var(--accent); }
 </style>
 </head>
 <body>
+  <div class="top"><button class="theme" id="theme" title="Toggle theme">◐ theme</button></div>
   <div class="hero">
     <div class="badge">community packaging · not affiliated with upstream</div>
     <h1>OpenDesign <span>for GNU/Linux</span></h1>
@@ -36,20 +52,33 @@
       <a href="https://github.com/nexu-io/open-design">OpenDesign</a> — the open-source,
       local-first design agent workspace. Built automatically from every
       <b>stable upstream release</b>, checksum-published, tested on Fedora.</p>
+    <p class="ver">Latest release: <b id="ver">resolving…</b></p>
 
-    <div class="grid">
-      <a class="btn" id="dl-deb" href="releases"><b>.deb</b><small>Debian / Ubuntu · <span data-v>—</span></small></a>
-      <a class="btn" id="dl-rpm" href="releases"><b>.rpm</b><small>Fedora / openSUSE · <span data-v>—</span></small></a>
-      <a class="btn" id="dl-flatpak" href="releases"><b>.flatpak</b><small>any distro · <span data-v>—</span></small></a>
+    <div class="cols" style="margin-bottom:4px">
+      <div class="col card">
+        <h2>.deb <span class="meta">Debian / Ubuntu</span></h2>
+        <div class="meta" data-size="deb"></div>
+        <a class="btn" id="dl-deb" href="releases">Download</a>
+        <div class="term"><pre><span class="c"># download + install (asks for sudo)</span>
+curl -fsSL <span id="base">https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux</span>/install.sh | sh -s deb</pre></div>
+      </div>
+      <div class="col card">
+        <h2>.rpm <span class="meta">Fedora / openSUSE</span></h2>
+        <div class="meta" data-size="rpm"></div>
+        <a class="btn" id="dl-rpm" href="releases">Download</a>
+        <div class="term"><pre><span class="c"># download + install (asks for sudo)</span>
+curl -fsSL <span id="base2">https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux</span>/install.sh | sh -s rpm</pre></div>
+      </div>
+      <div class="col card">
+        <h2>.flatpak <span class="meta">any distro</span></h2>
+        <div class="meta" data-size="flatpak"></div>
+        <a class="btn" id="dl-flatpak" href="releases">Download</a>
+        <div class="term"><pre><span class="c"># download + user install</span>
+curl -fsSL <span id="base3">https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux</span>/install.sh | sh -s flatpak</pre></div>
+      </div>
     </div>
-    <p class="note">Verify with <code>sha256sums.txt</code> from the
-      <a id="rel-link" href="releases">latest release</a>. Packages are unsigned; no auto-update.</p>
-
-    <div class="term">
-      <header><span>one-liner install</span><span>sh</span></header>
-      <pre><span class="c"># detects your package manager, verifies sha256, installs</span>
-curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh</pre>
-    </div>
+    <p class="note">Every release ships <code>sha256sums.txt</code> — the installer verifies it automatically.
+      Packages are unsigned; no auto-update. <a id="rel-link" href="releases">Release page →</a></p>
   </div>
 
   <footer>
@@ -62,22 +91,47 @@ curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | 
 
 <script>
 const REPO = "kacperpaczos/OpenDesign-For-GNU-Linux";
-fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
-  .then(r => r.ok ? r.json() : Promise.reject(r.status))
-  .then(rel => {
-    const v = rel.tag_name.replace(/^open-design-v/, "");
-    document.querySelectorAll("[data-v]").forEach(el => el.textContent = "v" + v);
-    for (const a of rel.assets || []) {
-      const link = a.name.endsWith(".deb") ? document.getElementById("dl-deb")
-                 : a.name.endsWith(".rpm") ? document.getElementById("dl-rpm")
-                 : a.name.endsWith(".flatpak") ? document.getElementById("dl-flatpak") : null;
-      if (link) link.href = a.browser_download_url;
-    }
-    document.getElementById("rel-link").href = rel.html_url;
-    document.querySelector(".term pre").insertAdjacentHTML("afterbegin",
-      `<span class="c"># latest release: ${rel.tag_name}\\n</span>`);
-  })
-  .catch(() => { document.querySelectorAll(".btn").forEach(b => b.href = `https://github.com/${REPO}/releases`); });
+const BASE = document.getElementById("base").textContent;
+["base2","base3"].forEach(id => document.getElementById(id).textContent = BASE);
+
+/* theme: saved choice wins, else system preference */
+const saved = localStorage.getItem("od-theme");
+const sys = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+apply(saved || sys);
+document.getElementById("theme").addEventListener("click", () => {
+  apply(document.documentElement.dataset.theme === "light" ? "dark" : "light");
+});
+function apply(t) {
+  document.documentElement.dataset.theme = t;
+  localStorage.setItem("od-theme", t);
+}
+
+/* fill an entry from a release object */
+function fill(rel) {
+  const v = rel.tag_name.replace(/^open-design-v/, "");
+  document.getElementById("ver").textContent = rel.tag_name;
+  document.getElementById("rel-link").href = rel.html_url;
+  const sizes = {};
+  for (const a of rel.assets || []) {
+    sizes[a.name] = (a.size / 1048576).toFixed(0) + " MB";
+    const map = { ".deb": "dl-deb", ".rpm": "dl-rpm", ".flatpak": "dl-flatpak" };
+    for (const ext in map) if (a.name.endsWith(ext)) document.getElementById(map[ext]).href = a.browser_download_url;
+  }
+  for (const k in sizes) { const el = document.querySelector(`[data-size="${k.replace(".","")}"]`) || document.querySelector(`[data-size="${k}"]`); if (el) el.textContent = sizes[k]; }
+}
+
+/* 1) CI-published latest.json (updated by the release workflow on every tag);
+   2) GitHub API fallback. */
+fetch("latest.json?ts=" + Date.now())
+  .then(r => { if (!r.ok) throw 0; return r.json(); })
+  .then(j => fetch(`https://api.github.com/repos/${REPO}/releases/tags/${j.tag}`)
+              .then(r => { if (!r.ok) throw 0; return r.json(); })
+              .catch(() => ({ tag_name: j.tag, html_url: j.html_url,
+                              assets: Object.entries(j.assets).map(([name, url]) =>
+                                ({ name, size: j.sizes[name] || 0, browser_download_url: url })) })))
+  .catch(() => fetch(`https://api.github.com/repos/${REPO}/releases/latest`).then(r => r.json()))
+  .then(rel => rel && fill(rel))
+  .catch(() => { document.getElementById("ver").textContent = "see releases"; });
 </script>
 </body>
 </html>

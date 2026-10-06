@@ -1,10 +1,16 @@
 #!/bin/sh
 # OpenDesign for GNU/Linux — community installer.
 # Resolves the latest stable release, verifies the sha256 checksum and
-# installs the native package for your distribution (deb or rpm).
+# installs the package for your distribution.
+#
+# Usage: curl -fsSL <this script> | sh            (auto-detect deb/rpm)
+#        curl -fsSL <this script> | sh -s deb      (force .deb)
+#        curl -fsSL <this script> | sh -s rpm      (force .rpm)
+#        curl -fsSL <this script> | sh -s flatpak  (Flatpak bundle, user install)
 set -e
 REPO="kacperpaczos/OpenDesign-For-GNU-Linux"
 BASE="https://github.com/$REPO/releases/download"
+WANT="${1:-auto}"
 
 say() { printf '\n==> %s\n' "$*"; }
 
@@ -16,42 +22,62 @@ TAG=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | sed -n '
 VERSION=${TAG#open-design-v}
 echo "    $TAG"
 
-# Pick the package type from the available package manager.
-if command -v dnf >/dev/null 2>&1; then
-  PKG=dnf; EXT=rpm; ARCH=x86_64
-elif command -v zypper >/dev/null 2>&1; then
-  PKG=zypper; EXT=rpm; ARCH=x86_64
-elif command -v apt-get >/dev/null 2>&1; then
-  PKG=apt; EXT=deb; ARCH=amd64
-else
-  echo "No supported package manager found (dnf / zypper / apt-get)."
-  echo "Grab a Flatpak from https://github.com/$REPO/releases instead."
-  exit 1
+# Resolve the package type: explicit argument wins, otherwise detect from
+# the available package manager.
+if [ "$WANT" = "auto" ]; then
+  if command -v dnf >/dev/null 2>&1; then WANT=rpm
+  elif command -v zypper >/dev/null 2>&1; then WANT=rpm
+  elif command -v apt-get >/dev/null 2>&1; then WANT=deb
+  else WANT=flatpak
+  fi
 fi
 
-ASSET="open-design_${VERSION}_${ARCH}.${EXT}"
-URL="$BASE/$TAG/$ASSET"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-say "Downloading $ASSET"
-curl -fsSL -o "$TMP/$ASSET" "$URL"
+fetch_sums() {
+  curl -fsSL -o "$TMP/sha256sums.txt" "$BASE/$TAG/sha256sums.txt" 2>/dev/null || true
+}
 
-say "Verifying sha256"
-curl -fsSL -o "$TMP/sha256sums.txt" "$BASE/$TAG/sha256sums.txt" || true
-if [ -s "$TMP/sha256sums.txt" ]; then
-  (cd "$TMP" && sed "s|output/||" sha256sums.txt | grep " $ASSET\$" | sha256sum -c -) \
+verify() {
+  [ -s "$TMP/sha256sums.txt" ] || { echo "    (sha256sums.txt unavailable — skipping verification)"; return 0; }
+  (cd "$TMP" && sed "s|output/||" sha256sums.txt | grep " $1\$" | sha256sum -c -) \
     || { echo "Checksum mismatch — aborting"; exit 1; }
+}
+
+if [ "$WANT" = "deb" ] || [ "$WANT" = "rpm" ]; then
+  if [ "$WANT" = "deb" ]; then PKG=apt-get; EXT=deb; ARCH=amd64; else PKG=dnf; EXT=rpm; ARCH=x86_64; fi
+  ASSET="open-design_${VERSION}_${ARCH}.${EXT}"
+  say "Downloading $ASSET"
+  curl -fsSL -o "$TMP/$ASSET" "$BASE/$TAG/$ASSET"
+  fetch_sums
+  verify "$ASSET"
+  say "Installing with $PKG (sudo may ask for your password)"
+  if [ "$(id -u)" = "0" ]; then
+    $PKG install -y "$TMP/$ASSET"
+  else
+    sudo $PKG install -y "$TMP/$ASSET"
+  fi
+  say "Done. Launch 'Open Design' from your application menu."
+
+elif [ "$WANT" = "flatpak" ]; then
+  command -v flatpak >/dev/null 2>&1 || { echo "flatpak is required (install flatpak first)"; exit 1; }
+  ASSET="open-design.flatpak"
+  say "Downloading $ASSET"
+  curl -fsSL -o "$TMP/$ASSET" "$BASE/$TAG/$ASSET"
+  fetch_sums
+  verify "$ASSET"
+  say "Installing the Flatpak bundle (user installation)"
+  if [ "$(id -u)" = "0" ]; then
+    flatpak install --system -y "$TMP/$ASSET"
+  else
+    flatpak install --user -y "$TMP/$ASSET"
+  fi
+  say "Done. Launch 'Open Design' from your application menu."
+
 else
-  echo "    (sha256sums.txt unavailable — skipping verification)"
+  echo "Unknown package type: $WANT (expected deb, rpm or flatpak)"
+  exit 1
 fi
 
-say "Installing with $PKG (sudo may ask for your password)"
-if [ "$(id -u)" = "0" ]; then
-  $PKG install -y "$TMP/$ASSET" || zypper --non-interactive install "$TMP/$ASSET"
-else
-  sudo $PKG install -y "$TMP/$ASSET" || sudo zypper --non-interactive install "$TMP/$ASSET"
-fi
-
-say "Done. Launch 'Open Design' from your application menu."
 echo "    Community build — unsigned, no auto-update. Upstream: https://open-design.ai"

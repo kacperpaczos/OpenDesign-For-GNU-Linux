@@ -1,0 +1,14 @@
+{
+  "tag": "open-design-v0.24.1",
+  "html_url": "https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/tag/open-design-v0.24.1-linux",
+  "assets": {
+    "open-design_0.24.1_amd64.deb": "https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/download/open-design-v0.24.1-linux/open-design_0.24.1_amd64.deb",
+    "open-design_0.24.1_x86_64.rpm": "https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/download/open-design-v0.24.1-linux/open-design_0.24.1_x86_64.rpm",
+    "open-design.flatpak": "https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/download/open-design-v0.24.1-linux/open-design.flatpak"
+  },
+  "sizes": {
+    "open-design_0.24.1_amd64.deb": 566587016,
+    "open-design_0.24.1_x86_64.rpm": 451127549,
+    "open-design.flatpak": 470756712
+  }
+}
