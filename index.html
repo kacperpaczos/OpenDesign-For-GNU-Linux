@@ -56,13 +56,18 @@
   .callout { border:1px solid var(--accent); border-left:4px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 auto 22px; max-width:720px; font-size:15px; background:var(--card); }
   .ver { color:var(--muted); font-size:14px; margin-bottom:6px; }
   .grid { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin:14px 0 6px; }
-  .card { text-align:left; min-width:250px; padding:16px 18px; border-radius:12px; border:1px solid var(--line); background:var(--card); }
-  .card h2 { font-size:17px; display:flex; gap:8px; align-items:center; }
-  .card .meta { color:var(--dim); font-size:14px; margin:2px 0 10px; }
+  .card { text-align:left; padding:18px 20px; border-radius:12px; border:1px solid var(--line); background:var(--card); }
+  .card h2 { font-size:17px; margin:0; display:flex; gap:8px; align-items:baseline; justify-content:space-between; }
+  .card h2 .meta { color:var(--dim); font-size:14px; font-weight:400; }
+  .card .size { color:var(--dim); font-size:14px; margin:4px 0 12px; min-height:24px; }
   .btn { display:inline-block; padding:8px 16px; border-radius:9px; border:1px solid var(--line); background:var(--bg); color:var(--fg); text-decoration:none; font-size:14px; }
   .btn:hover { border-color:var(--accent); }
-  .term { text-align:left; background:var(--term); border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-top:10px; }
-  .term pre { padding:12px 14px; overflow-x:auto; font:13px/1.5 ui-monospace,Menlo,Consolas,monospace; color:var(--fg); white-space:pre; }
+  .term { margin-top:12px; text-align:left; background:var(--term); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .term .bar { display:flex; justify-content:space-between; align-items:center; padding:6px 12px; border-bottom:1px solid var(--line2); }
+  .term .bar span { color:var(--termmuted); font-size:12px; }
+  .copy { cursor:pointer; border:1px solid var(--line); background:transparent; color:var(--fg); border-radius:6px; padding:2px 10px; font-size:12px; }
+  .copy:hover { border-color:var(--accent); color:var(--accent); }
+  .term pre { margin:0; padding:12px 14px; overflow-x:auto; font:13px/1.6 ui-monospace,Menlo,Consolas,monospace; color:var(--fg); white-space:pre; }
   .term pre .c { color:var(--termmuted); }
   .note { color:var(--dim); font-size:14px; }
   .cols { display:flex; flex-direction:column; gap:18px; align-items:center; width:100%; max-width:100%; margin:0 auto; padding:0 16px; }
@@ -99,24 +104,36 @@
     <div class="cols" style="margin-bottom:4px">
       <div class="col card">
         <h2>.deb <span class="meta">Debian / Ubuntu</span></h2>
-        <div class="meta" data-size="deb"></div>
+        <div class="size" data-size="deb"></div>
         <a class="btn" id="dl-deb" href="releases">Download</a>
-        <div class="term"><pre><span class="c"># download + install (asks for sudo)</span>
-curl -fsSL <span id="base">https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux</span>/install.sh | sh -s deb</pre></div>
+        <div class="term">
+          <div class="bar"><span>install — curl or wget</span><button class="copy" data-cmd="cmd-deb" type="button">Copy</button></div>
+          <pre id="cmd-deb"><span class="c"># download + install (asks for sudo)</span>
+curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s deb
+wget -qO- https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s deb</pre>
+        </div>
       </div>
       <div class="col card">
         <h2>.rpm <span class="meta">Fedora / openSUSE</span></h2>
-        <div class="meta" data-size="rpm"></div>
+        <div class="size" data-size="rpm"></div>
         <a class="btn" id="dl-rpm" href="releases">Download</a>
-        <div class="term"><pre><span class="c"># download + install (asks for sudo)</span>
-curl -fsSL <span id="base2">https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux</span>/install.sh | sh -s rpm</pre></div>
+        <div class="term">
+          <div class="bar"><span>install — curl or wget</span><button class="copy" data-cmd="cmd-rpm" type="button">Copy</button></div>
+          <pre id="cmd-rpm"><span class="c"># download + install (asks for sudo)</span>
+curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s rpm
+wget -qO- https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s rpm</pre>
+        </div>
       </div>
       <div class="col card">
         <h2>.flatpak <span class="meta">any distro</span></h2>
-        <div class="meta" data-size="flatpak"></div>
+        <div class="size" data-size="flatpak"></div>
         <a class="btn" id="dl-flatpak" href="releases">Download</a>
-        <div class="term"><pre><span class="c"># download + user install</span>
-curl -fsSL <span id="base3">https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux</span>/install.sh | sh -s flatpak</pre></div>
+        <div class="term">
+          <div class="bar"><span>install — curl or wget</span><button class="copy" data-cmd="cmd-flatpak" type="button">Copy</button></div>
+          <pre id="cmd-flatpak"><span class="c"># download + user install</span>
+curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s flatpak
+wget -qO- https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s flatpak</pre>
+        </div>
       </div>
     </div>
     <p class="note">Every release ships <code>sha256sums.txt</code> — the installer verifies it automatically.
