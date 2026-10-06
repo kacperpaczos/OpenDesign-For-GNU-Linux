@@ -3,8 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OpenDesign for GNU/Linux — community packages</title>
-<meta name="description" content="Community deb/rpm/Flatpak packages of OpenDesign, built automatically from every stable upstream release.">
+<title>OpenDesign for GNU/Linux — community packages (deb · rpm · Flatpak)</title>
+<meta name="description" content="Automatic community packages of OpenDesign for GNU/Linux: deb, rpm and Flatpak built from every stable upstream release. Download or install with one curl command.">
+<link rel="canonical" href="https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/">
+<meta name="robots" content="index, follow">
+<link rel="icon" type="image/png" href="icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OpenDesign for GNU/Linux">
+<meta property="og:title" content="OpenDesign for GNU/Linux — community packages (deb · rpm · Flatpak)">
+<meta property="og:description" content="We only package: automatic deb/rpm/Flatpak builds of every stable OpenDesign release. Download or one-liner install, sha256-verified.">
+<meta property="og:url" content="https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/">
+<meta property="og:image" content="https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/icon.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="OpenDesign for GNU/Linux — community packages">
+<meta name="twitter:description" content="Automatic deb/rpm/Flatpak builds of every stable OpenDesign release. One-liner install, sha256-verified.">
+<meta name="twitter:image" content="https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/icon.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "OpenDesign for GNU/Linux",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Linux",
+  "description": "Automatic community packages (deb, rpm, Flatpak) of OpenDesign, built from every stable upstream release.",
+  "url": "https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/",
+  "downloadUrl": "https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/latest",
+  "softwareVersion": "0.24.1",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "kacperpaczos", "url": "https://github.com/kacperpaczos" }
+}
+</script>
 <style>
   :root {
     --bg:#0b0d12; --fg:#e7e9ee; --muted:#9aa3b2; --dim:#8b93a3; --faint:#6f7889;
@@ -25,6 +53,7 @@
   h1 span { background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
   .sub { color:var(--muted); margin:14px auto 26px; max-width:660px; }
   .badge { display:inline-block; font-size:13px; color:var(--accent); border:1px solid var(--line); border-radius:999px; padding:3px 12px; margin-bottom:18px; }
+  .callout { border:1px solid var(--accent); border-left:4px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 auto 22px; max-width:720px; font-size:15px; background:var(--card); }
   .ver { color:var(--muted); font-size:14px; margin-bottom:6px; }
   .grid { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin:14px 0 6px; }
   .card { text-align:left; min-width:250px; padding:16px 18px; border-radius:12px; border:1px solid var(--line); background:var(--card); }
@@ -48,6 +77,13 @@
   <div class="hero">
     <div class="badge">community packaging · not affiliated with upstream</div>
     <h1>OpenDesign <span>for GNU/Linux</span></h1>
+    <div class="callout">
+      <b>We only package.</b> This site publishes <b>automatic builds</b> of the official
+      OpenDesign releases for GNU/Linux — repackaged into <b>deb, rpm and Flatpak</b>
+      on every stable upstream tag. No product code is developed here; everything is
+      destined to go upstream. Packaging sources:
+      <a href="https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux">github.com/kacperpaczos/OpenDesign-For-GNU-Linux</a>
+    </div>
     <p class="sub">Unofficial <b>deb / rpm / Flatpak</b> packages of
       <a href="https://github.com/nexu-io/open-design">OpenDesign</a> — the open-source,
       local-first design agent workspace. Built automatically from every
