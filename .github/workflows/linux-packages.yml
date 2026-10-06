@@ -18,8 +18,10 @@ on:
     # Daily latest-tag check. Off-round minute on purpose (avoid :00 load spike).
     - cron: '41 3 * * *'
 
+# Read-only by default; only the release job (which creates the GitHub
+# release) elevates to contents: write.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: linux-packages
@@ -127,7 +129,10 @@ jobs:
       - name: Build .deb
         run: |
           set -euo pipefail
-          pnpm tools-pack linux build --to deb
+          # --portable: release artifacts must not bake the build machine's
+          # tools-pack runtime roots into the packaged config — without it,
+          # apps/packaged throws PackagedPathAccessError on any other machine.
+          pnpm tools-pack linux build --to deb --portable
           mkdir -p output
           # electron-builder wipes its output root on every run (the rpm build
           # would remove the deb), so copy each artifact aside right after its
@@ -138,7 +143,8 @@ jobs:
       - name: Build .rpm
         run: |
           set -euo pipefail
-          pnpm tools-pack linux build --to rpm
+          # --portable: same release-artifact rationale as the .deb build above.
+          pnpm tools-pack linux build --to rpm --portable
           find .tmp -name '*.rpm' -exec cp -v {} output/ \;
           ls -lh output/
 
@@ -208,7 +214,7 @@ jobs:
       # --jobs=1 is deliberate: flatpak-builder is memory-hungry and the lane
       # shares the runner with nothing else; keep RAM usage bounded.
       - name: Build unpacked runtime
-        run: pnpm tools-pack linux build --to dir
+        run: pnpm tools-pack linux build --to dir --portable
 
       - name: Build Flatpak bundle
         run: |
@@ -216,8 +222,13 @@ jobs:
           mkdir -p output
           # Manifest source paths resolve relative to packaging/flatpak/, so
           # run from the repo root. App id comes from the manifest ("id" field).
-          flatpak-builder --force-clean --jobs=1 builddir packaging/flatpak/io.open-design.desktop.json
-          flatpak build-bundle --runtime builddir output/open-design.flatpak io.opendesign.desktop
+          # --user matches the --user runtime install above (the default is
+          # --system, which cannot see user installations). --repo exports the
+          # app into a local ostree repo because build-bundle reads a
+          # repository, not the build directory, and without --runtime it
+          # bundles the app (what we want here).
+          flatpak-builder --user --force-clean --jobs=1 --repo=repo builddir packaging/flatpak/io.open-design.desktop.json
+          flatpak build-bundle repo output/open-design.flatpak io.opendesign.desktop
           ls -lh output/
 
       - name: Upload Flatpak bundle
@@ -229,9 +240,15 @@ jobs:
 
   release:
     name: Publish Linux release
-    needs: [build, flatpak]
+    # detect must be listed DIRECTLY: the needs context carries outputs only
+    # from jobs listed in this job's own needs (not transitively), so with
+    # needs [build, flatpak] alone, needs.detect.outputs.tag expanded to an
+    # empty TAG and gh received the bare "-linux" as the release name.
+    needs: [detect, build, flatpak]
     if: needs.detect.outputs.new == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAG: ${{ needs.detect.outputs.tag }}
@@ -273,6 +290,22 @@ jobs:
             exit 0
           fi
           BASE="$(grep -v '^#' packaging/linux/SERIES-BASE | sed -n '1p')"
+          # Checksums for exactly the released files. Enumerate the three
+          # package globs explicitly so the sums file never includes itself
+          # and a missing best-effort flatpak cannot fail the release; write
+          # into output/ so the same upload glob below attaches it.
+          sums=()
+          for f in output/*.deb output/*.rpm output/*.flatpak; do
+            if [ -e "$f" ]; then
+              sums+=("$f")
+            fi
+          done
+          if [ "${#sums[@]}" -eq 0 ]; then
+            echo "::error::No package artifacts found under output/"
+            exit 1
+          fi
+          sha256sum "${sums[@]}" > output/sha256sums.txt
+          cat output/sha256sums.txt
           {
             echo "Community Linux packages for upstream ${TAG}."
             echo
@@ -297,7 +330,7 @@ jobs:
           sudo apt install ./open-design_*_amd64.deb
 
           # Fedora / RHEL
-          sudo dnf install ./open-design-*.rpm
+          sudo dnf install ./open-design_*.rpm
 
           # Flatpak (single-file bundle)
           flatpak --user install ./open-design.flatpak
@@ -305,7 +338,7 @@ jobs:
 
           ### Caveats
 
-          - These packages are **unsigned**; verify the checksums before installing.
+          - These packages are **unsigned**; verify them against `sha256sums.txt` in the release assets before installing.
           - Flatpak: Chromium's inner sandbox is disabled (`ELECTRON_DISABLE_SANDBOX=1`); the Flatpak sandbox itself remains the security boundary.
           - deb/rpm installs live under `/opt`.
           - No auto-update in these community packages; install a newer release to upgrade.
