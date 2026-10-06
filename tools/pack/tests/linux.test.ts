@@ -907,12 +907,17 @@ describe("writeLinuxBuilderConfig", () => {
 
       const builderConfig = JSON.parse(await readFile(paths.appBuilderConfigPath, "utf8")) as {
         linux: { target: string[] };
-        rpm?: { packageName: string; fpm: string[] };
+        rpm?: { packageName: string; artifactName?: string; fpm: string[] };
         deb?: unknown;
       };
       expect(builderConfig.linux.target).toEqual(["rpm"]);
       expect(builderConfig.rpm).toEqual({
         packageName: "open-design",
+        // Release-friendly filename (electron-builder substitutes ${version} and
+        // ${arch} — x86_64 for rpm), so release-notes globs like
+        // ./open-design_*.rpm match the real artifact instead of the default
+        // "Open Design ..." product name carrying a space.
+        artifactName: "open-design_${version}_${arch}.rpm",
         fpm: ["--license", "Apache-2.0"],
       });
       // Explicit targets only: --to rpm must not leak the deb block (and
