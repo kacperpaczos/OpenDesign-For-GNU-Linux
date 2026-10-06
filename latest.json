@@ -7,8 +7,8 @@
     "open-design.flatpak": "https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/download/open-design-v0.24.1-linux/open-design.flatpak"
   },
   "sizes": {
-    "open-design_0.24.1_amd64.deb": 566587016,
-    "open-design_0.24.1_x86_64.rpm": 451127549,
+    "open-design_0.24.1_amd64.deb": 569274596,
+    "open-design_0.24.1_x86_64.rpm": 451059253,
     "open-design.flatpak": 470756712
   }
 }
