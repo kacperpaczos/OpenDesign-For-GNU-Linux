@@ -1004,7 +1004,17 @@ export async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: Lin
             // the default name keeps the display product name — "Open Design"
             // with a space — which no install glob above can address.
             artifactName: "open-design_${version}_${arch}.rpm",
-            fpm: ["--license", "Apache-2.0"],
+            fpm: [
+              "--license",
+              "Apache-2.0",
+              // KDE cannot resolve spaced icon-theme names ("Open Design"),
+              // which is what the rpm desktop entry and icon are named after.
+              // The script renames both to the space-free form post-install;
+              // the deb lane needs nothing equivalent (its identity is
+              // already space-free).
+              "--after-install",
+              linuxResources.rpmAfterInstall,
+            ],
           },
         }
       : {}),

@@ -918,8 +918,21 @@ describe("writeLinuxBuilderConfig", () => {
         // ./open-design_*.rpm match the real artifact instead of the default
         // "Open Design ..." product name carrying a space.
         artifactName: "open-design_${version}_${arch}.rpm",
-        fpm: ["--license", "Apache-2.0"],
+        fpm: [
+          "--license",
+          "Apache-2.0",
+          // Post-install fixup: the rpm entry/icon keep the spaced product
+          // name, which KDE cannot resolve as an icon-theme name.
+          "--after-install",
+          expect.stringContaining("rpm-after-install.sh"),
+        ],
       });
+      // The referenced script must ship with the checkout (fpm runs it at
+      // install time on the user's machine, not at build time).
+      const afterInstallScript = builderConfig.rpm.fpm.at(-1) as string;
+      const afterInstallContent = await readFile(afterInstallScript, "utf8");
+      expect(afterInstallContent).toMatch(/^#!/m);
+      expect(afterInstallContent).toContain("open-design.png");
       // Explicit targets only: --to rpm must not leak the deb block (and
       // --to all never produces an rpm; resolveLinuxBuilderTargets owns that).
       expect(builderConfig.deb).toBeUndefined();
