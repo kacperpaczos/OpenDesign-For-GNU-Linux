@@ -61,11 +61,12 @@ export const linuxResources = {
   debianCopyright: join(resourcesRoot, "linux", "debian", "copyright"),
   debianChangelogTemplate: join(resourcesRoot, "linux", "debian", "changelog.template"),
   debianLintianOverrides: join(resourcesRoot, "linux", "debian", "lintian-overrides"),
-  // fpm --after-install script for the deb and rpm lanes: relocates the
-  // icon from the undeclared hicolor/1024x1024 into the declared 512x512
-  // context (Icon Theme Specification lookup ignores undeclared size
-  // directories) and repoints the rpm entry at the space-free name.
-  desktopIconFixup: join(resourcesRoot, "linux", "desktop-icon-fixup.sh"),
+  // Full after-install template for the deb and rpm lanes (supersedes the
+  // electron-builder default template — same boilerplate logic, plus a
+  // relocation of the app icon from the undeclared hicolor/1024x1024 into
+  // the declared 512x512 context, which the Icon Theme Specification
+  // lookup requires to ever render the menu icon).
+  afterInstall: join(resourcesRoot, "linux", "after-install.tpl"),
   // Linux counterpart of the shared mac/win web-standalone after-pack hook.
   // Lives under linux/ (not the shared resources root) because the Linux lane
   // materializes a self-contained standalone tree without the mac/win pruning,
