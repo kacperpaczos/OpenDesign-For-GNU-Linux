@@ -61,6 +61,10 @@ export const linuxResources = {
   debianCopyright: join(resourcesRoot, "linux", "debian", "copyright"),
   debianChangelogTemplate: join(resourcesRoot, "linux", "debian", "changelog.template"),
   debianLintianOverrides: join(resourcesRoot, "linux", "debian", "lintian-overrides"),
+  // fpm --after-install script for the rpm lane: renames the space-named
+  // icon and repoints the desktop entry (KDE cannot resolve spaced
+  // icon-theme names, so the menu icon never renders without this).
+  rpmAfterInstall: join(resourcesRoot, "linux", "rpm-after-install.sh"),
   // Linux counterpart of the shared mac/win web-standalone after-pack hook.
   // Lives under linux/ (not the shared resources root) because the Linux lane
   // materializes a self-contained standalone tree without the mac/win pruning,
