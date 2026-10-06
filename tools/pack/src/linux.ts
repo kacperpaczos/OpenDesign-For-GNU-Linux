@@ -938,13 +938,14 @@ export async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: Lin
               debMeta.changelogPath,
               `${debMeta.copyrightPath}=/usr/share/doc/${DEB_PACKAGE_NAME}/copyright`,
               `${debMeta.lintianOverridesPath}=/usr/share/lintian/overrides/${DEB_PACKAGE_NAME}`,
-              // Relocate the icon from the undeclared hicolor/1024x1024 into
-              // the declared 512x512 context (Icon Theme Specification lookup
-              // never sees undeclared size directories — the menu entry would
-              // render iconless).
-              "--after-install",
-              linuxResources.desktopIconFixup,
             ],
+            // Supersedes the electron-builder default after-install template
+            // (same boilerplate: /usr/bin symlink, chrome-sandbox perms, mime
+            // and desktop databases, AppArmor) and adds an icon relocation:
+            // the icon ships into the undeclared hicolor/1024x1024, which the
+            // Icon Theme Specification lookup never scans — the menu entry
+            // would render iconless (issue #8588).
+            afterInstall: linuxResources.afterInstall,
             // Debian-standard filename `<package>_<version>_<arch>.deb`. The
             // namespace is intentionally omitted (unlike the AppImage artifact):
             // each namespace already writes to its own output directory, so the
@@ -1010,17 +1011,8 @@ export async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: Lin
             // the default name keeps the display product name — "Open Design"
             // with a space — which no install glob above can address.
             artifactName: "open-design_${version}_${arch}.rpm",
-            fpm: [
-              "--license",
-              "Apache-2.0",
-              // KDE cannot resolve spaced icon-theme names ("Open Design"),
-              // which is what the rpm desktop entry and icon are named after.
-              // The script renames both to the space-free form post-install;
-              // the deb lane needs nothing equivalent (its identity is
-              // already space-free).
-              "--after-install",
-              linuxResources.desktopIconFixup,
-            ],
+            fpm: ["--license", "Apache-2.0"],
+            afterInstall: linuxResources.afterInstall,
           },
         }
       : {}),

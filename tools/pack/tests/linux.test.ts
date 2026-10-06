@@ -918,21 +918,23 @@ describe("writeLinuxBuilderConfig", () => {
         // ./open-design_*.rpm match the real artifact instead of the default
         // "Open Design ..." product name carrying a space.
         artifactName: "open-design_${version}_${arch}.rpm",
-        fpm: [
-          "--license",
-          "Apache-2.0",
-          // Post-install fixup: the rpm entry/icon keep the spaced product
-          // name, which KDE cannot resolve as an icon-theme name.
-          "--after-install",
-          expect.stringContaining("desktop-icon-fixup.sh"),
-        ],
+        fpm: ["--license", "Apache-2.0"],
+        // Post-install fixup: the rpm entry/icon keep the spaced product
+        // name, and the icon ships into the undeclared hicolor/1024x1024 —
+        // the after-install template relocates both (issues #8587/#8588).
+        afterInstall: expect.stringContaining("after-install.tpl"),
       });
-      // The referenced script must ship with the checkout (fpm runs it at
-      // install time on the user's machine, not at build time).
-      const afterInstallScript = builderConfig.rpm.fpm.at(-1) as string;
-      const afterInstallContent = await readFile(afterInstallScript, "utf8");
+      // The referenced template must ship with the checkout (fpm runs it at
+      // install time on the user's machine, not at build time). It has to
+      // carry the electron-builder default boilerplate (executable symlink,
+      // sandbox perms, mime/desktop databases) plus the icon relocation.
+      const afterInstallTemplate = builderConfig.rpm.afterInstall as string;
+      const afterInstallContent = await readFile(afterInstallTemplate, "utf8");
       expect(afterInstallContent).toMatch(/^#!/m);
+      expect(afterInstallContent).toContain("update-alternatives");
+      expect(afterInstallContent).toContain("512x512/apps");
       expect(afterInstallContent).toContain("open-design.png");
+      expect(afterInstallContent).toContain("Icon=open-design");
       // Explicit targets only: --to rpm must not leak the deb block (and
       // --to all never produces an rpm; resolveLinuxBuilderTargets owns that).
       expect(builderConfig.deb).toBeUndefined();
