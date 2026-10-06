@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenDesign for GNU/Linux — community packages</title>
+<meta name="description" content="Community deb/rpm/Flatpak packages of OpenDesign, built automatically from every stable upstream release.">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background:#0b0d12; color:#e7e9ee; font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; min-height:100vh; display:flex; flex-direction:column; }
+  .hero { max-width:880px; margin:0 auto; padding:72px 24px 40px; text-align:center; }
+  h1 { font-size:clamp(28px,5vw,44px); letter-spacing:-.02em; }
+  h1 span { background:linear-gradient(90deg,#7aa2ff,#9d7aff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .sub { color:#9aa3b2; margin:14px auto 30px; max-width:640px; }
+  .badge { display:inline-block; font-size:13px; color:#7aa2ff; border:1px solid #2a3040; border-radius:999px; padding:3px 12px; margin-bottom:18px; }
+  .grid { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin:26px 0 8px; }
+  .btn { display:flex; flex-direction:column; gap:2px; min-width:210px; padding:16px 22px; border-radius:12px; border:1px solid #2a3040; background:#141822; color:#e7e9ee; text-decoration:none; transition:border-color .15s, transform .15s; }
+  .btn:hover { border-color:#7aa2ff; transform:translateY(-2px); }
+  .btn b { font-size:17px; } .btn small { color:#8b93a3; }
+  .term { max-width:760px; margin:26px auto; text-align:left; background:#0f1218; border:1px solid #2a3040; border-radius:12px; overflow:hidden; }
+  .term header { padding:8px 14px; color:#8b93a3; font-size:13px; border-bottom:1px solid #1c2230; display:flex; justify-content:space-between; }
+  .term pre { padding:16px 18px; overflow-x:auto; font:14px/1.5 ui-monospace,Menlo,Consolas,monospace; color:#c7d0dd; }
+  .term .c { color:#6f7889; }
+  .note { color:#8b93a3; font-size:14px; }
+  footer { margin-top:auto; padding:30px 24px; text-align:center; color:#6f7889; font-size:14px; }
+  footer a { color:#9aa3b2; }
+  a { color:#7aa2ff; }
+</style>
+</head>
+<body>
+  <div class="hero">
+    <div class="badge">community packaging · not affiliated with upstream</div>
+    <h1>OpenDesign <span>for GNU/Linux</span></h1>
+    <p class="sub">Unofficial <b>deb / rpm / Flatpak</b> packages of
+      <a href="https://github.com/nexu-io/open-design">OpenDesign</a> — the open-source,
+      local-first design agent workspace. Built automatically from every
+      <b>stable upstream release</b>, checksum-published, tested on Fedora.</p>
+
+    <div class="grid">
+      <a class="btn" id="dl-deb" href="releases"><b>.deb</b><small>Debian / Ubuntu · <span data-v>—</span></small></a>
+      <a class="btn" id="dl-rpm" href="releases"><b>.rpm</b><small>Fedora / openSUSE · <span data-v>—</span></small></a>
+      <a class="btn" id="dl-flatpak" href="releases"><b>.flatpak</b><small>any distro · <span data-v>—</span></small></a>
+    </div>
+    <p class="note">Verify with <code>sha256sums.txt</code> from the
+      <a id="rel-link" href="releases">latest release</a>. Packages are unsigned; no auto-update.</p>
+
+    <div class="term">
+      <header><span>one-liner install</span><span>sh</span></header>
+      <pre><span class="c"># detects your package manager, verifies sha256, installs</span>
+curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh</pre>
+    </div>
+  </div>
+
+  <footer>
+    OpenDesign is an Apache-2.0 project by
+    <a href="https://github.com/nexu-io/open-design">nexu-io</a> ·
+    official site: <a href="https://open-design.ai">open-design.ai</a> ·
+    packaging sources: <a href="https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux">this repo</a> ·
+    everything here is destined for upstream
+  </footer>
+
+<script>
+const REPO = "kacperpaczos/OpenDesign-For-GNU-Linux";
+fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
+  .then(r => r.ok ? r.json() : Promise.reject(r.status))
+  .then(rel => {
+    const v = rel.tag_name.replace(/^open-design-v/, "");
+    document.querySelectorAll("[data-v]").forEach(el => el.textContent = "v" + v);
+    for (const a of rel.assets || []) {
+      const link = a.name.endsWith(".deb") ? document.getElementById("dl-deb")
+                 : a.name.endsWith(".rpm") ? document.getElementById("dl-rpm")
+                 : a.name.endsWith(".flatpak") ? document.getElementById("dl-flatpak") : null;
+      if (link) link.href = a.browser_download_url;
+    }
+    document.getElementById("rel-link").href = rel.html_url;
+    document.querySelector(".term pre").insertAdjacentHTML("afterbegin",
+      `<span class="c"># latest release: ${rel.tag_name}\\n</span>`);
+  })
+  .catch(() => { document.querySelectorAll(".btn").forEach(b => b.href = `https://github.com/${REPO}/releases`); });
+</script>
+</body>
+</html>
