@@ -3,194 +3,293 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OpenDesign for GNU/Linux — community packages (deb · rpm · Flatpak)</title>
-<meta name="description" content="Automatic community packages of OpenDesign for GNU/Linux: deb, rpm and Flatpak built from every stable upstream release. Download or install with one curl command.">
+<title>OpenDesign for GNU/Linux: community deb, rpm and Flatpak packages</title>
+<meta name="description" content="Unofficial community packages of OpenDesign for GNU/Linux. deb, rpm and Flatpak builds of each stable upstream release, with sha256 checksums and a one-line installer.">
 <link rel="canonical" href="https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/">
 <meta name="robots" content="index, follow">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1014" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" href="icon.png">
+<noscript><style>#ver { display: none; }</style></noscript>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="OpenDesign for GNU/Linux">
-<meta property="og:title" content="OpenDesign for GNU/Linux — community packages (deb · rpm · Flatpak)">
-<meta property="og:description" content="We only package: automatic deb/rpm/Flatpak builds of every stable OpenDesign release. Download or one-liner install, sha256-verified.">
+<meta property="og:title" content="OpenDesign for GNU/Linux: community deb, rpm and Flatpak packages">
+<meta property="og:description" content="Unofficial packaging of OpenDesign for GNU/Linux. deb, rpm and Flatpak builds of each stable upstream release, sha256-verified, one-line install.">
 <meta property="og:url" content="https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/">
 <meta property="og:image" content="https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/icon.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="OpenDesign for GNU/Linux — community packages">
-<meta name="twitter:description" content="Automatic deb/rpm/Flatpak builds of every stable OpenDesign release. One-liner install, sha256-verified.">
+<meta name="twitter:title" content="OpenDesign for GNU/Linux: community packages">
+<meta name="twitter:description" content="Unofficial deb, rpm and Flatpak builds of each stable OpenDesign release. One-line install, sha256-verified.">
 <meta name="twitter:image" content="https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/icon.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "OpenDesign for GNU/Linux",
+  "alternateName": "OpenDesign community Linux packages",
   "applicationCategory": "DesignApplication",
   "operatingSystem": "Linux",
-  "description": "Automatic community packages (deb, rpm, Flatpak) of OpenDesign, built from every stable upstream release.",
+  "description": "Unofficial community packages (deb, rpm, Flatpak) of OpenDesign, built from each stable upstream release. Packaging only; the product is developed upstream by nexu-io.",
   "url": "https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/",
   "downloadUrl": "https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/latest",
-  "softwareVersion": "0.24.1",
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "isBasedOn": { "@type": "SoftwareSourceCode", "name": "OpenDesign", "codeRepository": "https://github.com/nexu-io/open-design" },
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "author": { "@type": "Person", "name": "kacperpaczos", "url": "https://github.com/kacperpaczos" }
 }
 </script>
 <style>
   :root {
-    --bg:#0b0d12; --fg:#e7e9ee; --muted:#9aa3b2; --dim:#8b93a3; --faint:#6f7889;
-    --card:#141822; --line:#2a3040; --line2:#1c2230; --accent:#7aa2ff; --accent2:#9d7aff;
-    --term:#0f1218; --termmuted:#8b93a3; color-scheme:dark;
+    color-scheme: light dark;
+    --bg: #f6f7f9; --surface: #ffffff; --fg: #15181e; --muted: #4f5866;
+    --line: #d7dbe2; --code-bg: #eef0f4; --accent: #2b55d6; --accent-fg: #ffffff;
+    --notice-bg: #fff6dc; --notice-line: #e2c25a; --notice-fg: #4a3a00;
+    --focus: #2b55d6; --radius: 12px;
+    --mono: ui-monospace, "SFMono-Regular", "DejaVu Sans Mono", Menlo, Consolas, monospace;
   }
-  html[data-theme="light"] {
-    --bg:#f7f8fb; --fg:#171a21; --muted:#5a6272; --dim:#6b7382; --faint:#838b9a;
-    --card:#ffffff; --line:#d9dde6; --line2:#e7eaf1; --accent:#2f5fe0; --accent2:#7a3fe0;
-    --term:#f0f2f7; --termmuted:#6b7382; color-scheme:light;
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1014; --surface: #161a21; --fg: #e8eaee; --muted: #a3acba;
+      --line: #2c323d; --code-bg: #0a0c10; --accent: #8fb0ff; --accent-fg: #0e1014;
+      --notice-bg: #2a2410; --notice-line: #6b5a1d; --notice-fg: #f3e2a6;
+      --focus: #8fb0ff;
+    }
   }
-  * { box-sizing:border-box; margin:0; }
-  body { background:var(--bg); color:var(--fg); font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; min-height:100vh; display:flex; flex-direction:column; transition:background .2s,color .2s; }
-  .top { max-width:920px; margin:0 auto; padding:22px 24px 0; display:flex; justify-content:flex-end; width:100%; }
-  .theme { cursor:pointer; border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:999px; padding:5px 14px; font-size:14px; }
-  .hero { max-width:880px; margin:0 auto; padding:40px 24px 32px; text-align:center; }
-  h1 { font-size:clamp(28px,5vw,44px); letter-spacing:-.02em; }
-  h1 span { background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
-  .sub { color:var(--muted); margin:14px auto 26px; max-width:660px; }
-  .badge { display:inline-block; font-size:13px; color:var(--accent); border:1px solid var(--line); border-radius:999px; padding:3px 12px; margin-bottom:18px; }
-  .callout { border:1px solid var(--accent); border-left:4px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 auto 22px; max-width:720px; font-size:15px; background:var(--card); }
-  .ver { color:var(--muted); font-size:14px; margin-bottom:6px; }
-  .grid { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin:14px 0 6px; }
-  .card { text-align:left; padding:18px 20px; border-radius:12px; border:1px solid var(--line); background:var(--card); }
-  .card h2 { font-size:17px; margin:0; display:flex; gap:8px; align-items:baseline; justify-content:space-between; }
-  .card h2 .meta { color:var(--dim); font-size:14px; font-weight:400; }
-  .card .size { color:var(--dim); font-size:14px; margin:4px 0 12px; min-height:24px; }
-  .btn { display:inline-block; padding:8px 16px; border-radius:9px; border:1px solid var(--line); background:var(--bg); color:var(--fg); text-decoration:none; font-size:14px; }
-  .btn:hover { border-color:var(--accent); }
-  .term { margin-top:12px; text-align:left; background:var(--term); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
-  .term .bar { display:flex; justify-content:space-between; align-items:center; padding:6px 12px; border-bottom:1px solid var(--line2); }
-  .term .bar span { color:var(--termmuted); font-size:12px; }
-  .copy { cursor:pointer; border:1px solid var(--line); background:transparent; color:var(--fg); border-radius:6px; padding:2px 10px; font-size:12px; }
-  .copy:hover { border-color:var(--accent); color:var(--accent); }
-  .term pre { margin:0; padding:12px 14px; overflow-x:auto; font:13px/1.6 ui-monospace,Menlo,Consolas,monospace; color:var(--fg); white-space:pre; }
-  .term pre .c { color:var(--termmuted); }
-  .note { color:var(--dim); font-size:14px; }
-  .cols { display:flex; flex-direction:column; gap:18px; align-items:center; width:100%; max-width:100%; margin:0 auto; padding:0 16px; }
-  .col { width:100%; text-align:left; }
-  @media (min-width: 768px) {
-    .hero { max-width:920px; }
-    .cols { max-width:1520px; padding:0 24px; }
-    .callout { max-width:820px; }
-    .term pre { font-size:14px; }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Cantarell, sans-serif; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+  code, pre { font-family: var(--mono); font-size: .875rem; }
+  :not(pre) > code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 5px; padding: 0 .3em; }
+  h1, h2, h3 { line-height: 1.25; margin: 0; }
+  p { margin: 0 0 .75rem; }
+
+  .skip { position: absolute; left: -9999px; top: 0; }
+  .skip:focus { left: 16px; top: 12px; z-index: 10; background: var(--surface); padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; }
+
+  .wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 16px; }
+
+  header.site { padding: 32px 0 8px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand img { width: 52px; height: 52px; border-radius: 12px; flex: none; }
+  h1 { font-size: clamp(1.6rem, 6vw, 2.25rem); letter-spacing: -.01em; }
+  .lede { color: var(--muted); font-size: 1.05rem; margin: 16px 0 0; }
+  .release { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 14px; font-size: .9rem; color: var(--muted); }
+  .release strong { color: var(--fg); font-family: var(--mono); font-weight: 600; }
+
+  .notice { margin: 20px 0 0; padding: 12px 14px; background: var(--notice-bg); color: var(--notice-fg);
+    border: 1px solid var(--notice-line); border-radius: var(--radius); font-size: .95rem; }
+  .notice p { margin: 0; }
+  .notice a { color: inherit; font-weight: 600; }
+
+  nav.toc { margin: 20px 0 0; }
+  nav.toc ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  nav.toc a { display: inline-block; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px;
+    color: var(--fg); text-decoration: none; font-size: .9rem; background: var(--surface); }
+  nav.toc a:hover { border-color: var(--accent); }
+
+  main section { padding: 36px 0 0; scroll-margin-top: 12px; }
+  main h2 { font-size: 1.35rem; margin-bottom: 12px; }
+  .muted { color: var(--muted); }
+
+  .pkgs { display: grid; gap: 14px; margin-top: 16px; }
+  .pkg { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; min-width: 0; }
+  .pkg-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+  .pkg h3 { font-size: 1.1rem; }
+  .pkg h3 span { font-family: var(--mono); font-weight: 500; font-size: .95rem; color: var(--muted); margin-left: 6px; }
+  .pkg .for { color: var(--muted); font-size: .9rem; margin: 2px 0 12px; }
+
+  .cmd { display: flex; align-items: stretch; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .cmd pre { margin: 0; padding: 10px 12px; flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+  .cmd pre:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+  .copy { flex: none; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--fg);
+    font: inherit; font-size: .85rem; padding: 0 14px; cursor: pointer; min-width: 72px; min-height: 44px; }
+  .copy:hover { background: var(--surface); }
+  .copy[data-done] { color: var(--accent); }
+
+  .dl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 8px 16px;
+    background: var(--accent); color: var(--accent-fg); border-radius: 10px; text-decoration: none; font-weight: 600; font-size: .95rem; }
+  .btn:hover { filter: brightness(1.08); }
+  .size { color: var(--muted); font-size: .85rem; font-family: var(--mono); overflow-wrap: anywhere; }
+  .hint { color: var(--muted); font-size: .9rem; margin-top: 14px; }
+
+  ol.steps { margin: 0 0 12px; padding-left: 1.3rem; }
+  ol.steps li { margin-bottom: 6px; }
+  .facts { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+  .facts li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+  .facts strong { display: block; }
+
+  ul.links { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  ul.links a { display: block; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: var(--fg); }
+  ul.links a:hover { border-color: var(--accent); }
+  ul.links a span { display: block; color: var(--muted); font-size: .9rem; }
+
+  footer { margin-top: 48px; padding: 20px 0 32px; border-top: 1px solid var(--line); color: var(--muted); font-size: .875rem; }
+  footer a { color: var(--muted); }
+
+  .vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (min-width: 640px) {
+    .wrap { padding: 0 24px; }
+    header.site { padding-top: 56px; }
+    .facts { grid-template-columns: repeat(3, 1fr); }
+    ul.links { grid-template-columns: repeat(3, 1fr); }
   }
-  footer { margin-top:auto; padding:30px 24px; text-align:center; color:var(--faint); font-size:14px; }
-  footer a, .note a { color:var(--muted); }
-  a { color:var(--accent); }
 </style>
 </head>
 <body>
-  <div class="top"><button class="theme" id="theme" title="Toggle theme">◐ theme</button></div>
-  <div class="hero">
-    <div class="badge">community packaging · not affiliated with upstream</div>
-    <h1>OpenDesign <span>for GNU/Linux</span></h1>
-    <div class="callout">
-      <b>We only package.</b> This site publishes <b>automatic builds</b> of the official
-      OpenDesign releases for GNU/Linux — repackaged into <b>deb, rpm and Flatpak</b>
-      on every stable upstream tag. No product code is developed here; everything is
-      destined to go upstream. Packaging sources:
-      <a href="https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux">github.com/kacperpaczos/OpenDesign-For-GNU-Linux</a>
+<a class="skip" href="#install">Skip to install</a>
+<div class="wrap">
+  <header class="site">
+    <div class="brand">
+      <img src="icon.png" alt="" width="52" height="52">
+      <h1>OpenDesign for GNU/Linux</h1>
     </div>
-    <p class="sub">Unofficial <b>deb / rpm / Flatpak</b> packages of
-      <a href="https://github.com/nexu-io/open-design">OpenDesign</a> — the open-source,
-      local-first design agent workspace. Built automatically from every
-      <b>stable upstream release</b>, checksum-published, tested on Fedora.</p>
-    <p class="ver">Latest release: <b id="ver">resolving…</b></p>
+    <p class="lede">deb, rpm and Flatpak packages of
+      <a href="https://github.com/nexu-io/open-design">OpenDesign</a>, the open-source, local-first design agent
+      workspace. Each stable upstream release is repackaged for Linux and published with sha256 checksums.</p>
+    <p class="release" aria-live="polite">Latest release: <strong id="ver">loading…</strong>
+      <a id="rel-link" href="https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/latest">release notes</a></p>
+    <div class="notice" role="note">
+      <p><strong>Unofficial community packaging.</strong> This project only builds Linux packages. It is not the OpenDesign
+        product repository and is not affiliated with its authors. Report app bugs
+        <a href="https://github.com/nexu-io/open-design">upstream</a>.</p>
+    </div>
+    <nav class="toc" aria-label="On this page">
+      <ul>
+        <li><a href="#install">Install</a></li>
+        <li><a href="#verify">Verify</a></li>
+        <li><a href="#links">Links</a></li>
+      </ul>
+    </nav>
+  </header>
 
-    <div class="cols" style="margin-bottom:4px">
-      <div class="col card">
-        <h2>.deb <span class="meta">Debian / Ubuntu</span></h2>
-        <div class="size" data-size="deb"></div>
-        <a class="btn" id="dl-deb" href="releases">Download</a>
-        <div class="term">
-          <div class="bar"><span>install — curl or wget</span><button class="copy" data-cmd="cmd-deb" type="button">Copy</button></div>
-          <pre id="cmd-deb"><span class="c"># download + install (asks for sudo)</span>
-curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s deb
-wget -qO- https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s deb</pre>
-        </div>
+  <main>
+    <section id="install" aria-labelledby="install-h">
+      <h2 id="install-h">Install</h2>
+      <p class="muted">Pick your package format. The one-liner downloads the latest release, checks it against
+        <code>sha256sums.txt</code> and installs it. You can also download the file and install it yourself.</p>
+
+      <div class="pkgs">
+        <article class="pkg" aria-labelledby="deb-h">
+          <div class="pkg-head"><h3 id="deb-h">Debian, Ubuntu <span>.deb</span></h3></div>
+          <p class="for">Also Linux Mint, Pop!_OS and other apt-based distros. Installs with <code>apt-get</code> (asks for sudo).</p>
+          <div class="cmd"><pre id="cmd-deb" tabindex="0" aria-label="deb install command">curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s deb</pre><button class="copy" type="button" data-copy="cmd-deb" aria-label="Copy deb install command">Copy</button></div>
+          <div class="dl"><a class="btn" id="dl-deb" data-ext=".deb" href="https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/latest">Download .deb</a><span class="size" id="sz-deb"></span></div>
+        </article>
+
+        <article class="pkg" aria-labelledby="rpm-h">
+          <div class="pkg-head"><h3 id="rpm-h">Fedora, RHEL <span>.rpm</span></h3></div>
+          <p class="for">Any dnf-based distro. Installs with <code>dnf</code> (asks for sudo). On openSUSE, download the file and run <code>sudo zypper install ./open-design_*.rpm</code>.</p>
+          <div class="cmd"><pre id="cmd-rpm" tabindex="0" aria-label="rpm install command">curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s rpm</pre><button class="copy" type="button" data-copy="cmd-rpm" aria-label="Copy rpm install command">Copy</button></div>
+          <div class="dl"><a class="btn" id="dl-rpm" data-ext=".rpm" href="https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/latest">Download .rpm</a><span class="size" id="sz-rpm"></span></div>
+        </article>
+
+        <article class="pkg" aria-labelledby="flatpak-h">
+          <div class="pkg-head"><h3 id="flatpak-h">Any distro <span>.flatpak</span></h3></div>
+          <p class="for">Needs <code>flatpak</code>. Installs the bundle for your user only, no sudo.</p>
+          <div class="cmd"><pre id="cmd-flatpak" tabindex="0" aria-label="Flatpak install command">curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s flatpak</pre><button class="copy" type="button" data-copy="cmd-flatpak" aria-label="Copy Flatpak install command">Copy</button></div>
+          <div class="dl"><a class="btn" id="dl-flatpak" data-ext=".flatpak" href="https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/latest">Download .flatpak</a><span class="size" id="sz-flatpak"></span></div>
+        </article>
       </div>
-      <div class="col card">
-        <h2>.rpm <span class="meta">Fedora / openSUSE</span></h2>
-        <div class="size" data-size="rpm"></div>
-        <a class="btn" id="dl-rpm" href="releases">Download</a>
-        <div class="term">
-          <div class="bar"><span>install — curl or wget</span><button class="copy" data-cmd="cmd-rpm" type="button">Copy</button></div>
-          <pre id="cmd-rpm"><span class="c"># download + install (asks for sudo)</span>
-curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s rpm
-wget -qO- https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s rpm</pre>
-        </div>
-      </div>
-      <div class="col card">
-        <h2>.flatpak <span class="meta">any distro</span></h2>
-        <div class="size" data-size="flatpak"></div>
-        <a class="btn" id="dl-flatpak" href="releases">Download</a>
-        <div class="term">
-          <div class="bar"><span>install — curl or wget</span><button class="copy" data-cmd="cmd-flatpak" type="button">Copy</button></div>
-          <pre id="cmd-flatpak"><span class="c"># download + user install</span>
-curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s flatpak
-wget -qO- https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s flatpak</pre>
-        </div>
-      </div>
-    </div>
-    <p class="note">Every release ships <code>sha256sums.txt</code> — the installer verifies it automatically.
-      Packages are unsigned; no auto-update. <a id="rel-link" href="releases">Release page →</a></p>
-  </div>
+
+      <p class="hint">No curl? Replace <code>curl -fsSL</code> with <code>wget -qO-</code>.
+        Want to read the script first? <a href="install.sh">View install.sh</a>.</p>
+      <p class="vh" id="copy-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="verify" aria-labelledby="verify-h">
+      <h2 id="verify-h">Verify</h2>
+      <p>The one-liner checks the download for you. To check a manually downloaded package, put it next to
+        <a id="sums-link" href="https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/latest"><code>sha256sums.txt</code></a>
+        from the same release and run:</p>
+      <div class="cmd"><pre id="cmd-verify" tabindex="0" aria-label="checksum command">sha256sum -c --ignore-missing sha256sums.txt</pre><button class="copy" type="button" data-copy="cmd-verify" aria-label="Copy checksum command">Copy</button></div>
+      <ul class="facts">
+        <li><strong>Checksums</strong><span class="muted">Every release ships <code>sha256sums.txt</code>.</span></li>
+        <li><strong>Unsigned</strong><span class="muted">Packages carry no GPG signature.</span></li>
+        <li><strong>No auto-update</strong><span class="muted">Check back here or watch the releases for new versions.</span></li>
+      </ul>
+    </section>
+
+    <section id="links" aria-labelledby="links-h">
+      <h2 id="links-h">Links</h2>
+      <ul class="links">
+        <li><a href="https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases">Releases<span>All package builds and checksums</span></a></li>
+        <li><a href="https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/blob/HEAD/docs/linux-packages.md">Packaging docs<span>docs/linux-packages.md</span></a></li>
+        <li><a href="https://github.com/nexu-io/open-design">Upstream project<span>nexu-io/open-design</span></a></li>
+      </ul>
+    </section>
+  </main>
 
   <footer>
-    OpenDesign is an Apache-2.0 project by
-    <a href="https://github.com/nexu-io/open-design">nexu-io</a> ·
-    official site: <a href="https://open-design.ai">open-design.ai</a> ·
-    packaging sources: <a href="https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux">this repo</a> ·
-    everything here is destined for upstream
+    <p>OpenDesign is an Apache-2.0 project by <a href="https://github.com/nexu-io">nexu-io</a>
+      (<a href="https://open-design.ai">open-design.ai</a>). Packaging maintained in
+      <a href="https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux">kacperpaczos/OpenDesign-For-GNU-Linux</a>.</p>
   </footer>
+</div>
 
 <script>
-const REPO = "kacperpaczos/OpenDesign-For-GNU-Linux";
-const BASE = document.getElementById("base").textContent;
-["base2","base3"].forEach(id => document.getElementById(id).textContent = BASE);
+(function () {
+  "use strict";
+  var FALLBACK = "https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases/latest";
+  var $ = function (id) { return document.getElementById(id); };
 
-/* theme: saved choice wins, else system preference */
-const saved = localStorage.getItem("od-theme");
-const sys = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-apply(saved || sys);
-document.getElementById("theme").addEventListener("click", () => {
-  apply(document.documentElement.dataset.theme === "light" ? "dark" : "light");
-});
-function apply(t) {
-  document.documentElement.dataset.theme = t;
-  localStorage.setItem("od-theme", t);
-}
+  /* Copy buttons: Clipboard API, falling back to selecting the text. */
+  var status = $("copy-status");
+  document.querySelectorAll("[data-copy]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var text = $(btn.dataset.copy).textContent.trim();
+      var done = function () {
+        btn.textContent = "Copied"; btn.dataset.done = "";
+        status.textContent = "Command copied to clipboard";
+        setTimeout(function () { btn.textContent = "Copy"; delete btn.dataset.done; status.textContent = ""; }, 2000);
+      };
+      var select = function () {
+        var r = document.createRange(); r.selectNodeContents($(btn.dataset.copy));
+        var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+        status.textContent = "Command selected. Press Ctrl+C to copy.";
+      };
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, select);
+      else select();
+    });
+  });
 
-/* fill an entry from a release object */
-function fill(rel) {
-  const v = rel.tag_name.replace(/^open-design-v/, "");
-  document.getElementById("ver").textContent = rel.tag_name;
-  document.getElementById("rel-link").href = rel.html_url;
-  const sizes = {};
-  for (const a of rel.assets || []) {
-    sizes[a.name] = (a.size / 1048576).toFixed(0) + " MB";
-    const map = { ".deb": "dl-deb", ".rpm": "dl-rpm", ".flatpak": "dl-flatpak" };
-    for (const ext in map) if (a.name.endsWith(ext)) document.getElementById(map[ext]).href = a.browser_download_url;
+  /* Downloads: latest.json is rewritten by CI after every release.
+     Shape: { tag, html_url, assets: { "<file name>": "<url>" }, sizes?: { "<file name>": bytes } }.
+     On any failure the buttons keep pointing at the GitHub latest-release page. */
+  function fail() {
+    $("ver").textContent = "see GitHub";
   }
-  for (const k in sizes) { const el = document.querySelector(`[data-size="${k.replace(".","")}"]`) || document.querySelector(`[data-size="${k}"]`); if (el) el.textContent = sizes[k]; }
-}
+  function mb(bytes) { return Math.round(bytes / 1048576) + " MB"; }
 
-/* 1) CI-published latest.json (updated by the release workflow on every tag);
-   2) GitHub API fallback. */
-fetch("latest.json?ts=" + Date.now())
-  .then(r => { if (!r.ok) throw 0; return r.json(); })
-  .then(j => fetch(`https://api.github.com/repos/${REPO}/releases/tags/${j.tag}`)
-              .then(r => { if (!r.ok) throw 0; return r.json(); })
-              .catch(() => ({ tag_name: j.tag, html_url: j.html_url,
-                              assets: Object.entries(j.assets).map(([name, url]) =>
-                                ({ name, size: j.sizes[name] || 0, browser_download_url: url })) })))
-  .catch(() => fetch(`https://api.github.com/repos/${REPO}/releases/latest`).then(r => r.json()))
-  .then(rel => rel && fill(rel))
-  .catch(() => { document.getElementById("ver").textContent = "see releases"; });
+  fetch("latest.json", { cache: "no-cache" })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (j) {
+      if (!j || typeof j.assets !== "object" || !j.assets) throw new Error("bad shape");
+      var names = Object.keys(j.assets), found = 0;
+      document.querySelectorAll("a[data-ext]").forEach(function (a) {
+        var name = names.filter(function (n) { return n.slice(-a.dataset.ext.length) === a.dataset.ext; })[0];
+        if (!name || typeof j.assets[name] !== "string") return;
+        a.href = j.assets[name];
+        found++;
+        var kind = a.id.slice(3), size = j.sizes && j.sizes[name];
+        $("sz-" + kind).textContent = name + (size ? " · " + mb(size) : "");
+      });
+      if (!found) throw new Error("no assets");
+      var ver = String(j.tag || "").replace(/^open-design-v/, "").replace(/-linux$/, "");
+      $("ver").textContent = ver ? "v" + ver : "see GitHub";
+      if (j.html_url) {
+        $("rel-link").href = j.html_url;
+        $("sums-link").href = j.html_url.replace("/releases/tag/", "/releases/download/") + "/sha256sums.txt";
+      }
+    })
+    .catch(fail);
+})();
 </script>
 </body>
 </html>

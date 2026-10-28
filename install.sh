@@ -29,6 +29,7 @@ say "Resolving the latest release"
 TAG=$(fetch "https://api.github.com/repos/$REPO/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1)
 [ -n "$TAG" ] || { echo "Could not resolve the latest release"; exit 1; }
 VERSION=${TAG#open-design-v}
+VERSION=${VERSION%-linux}   # tags are open-design-vX.Y.Z-linux; assets use X.Y.Z
 echo "    $TAG"
 
 # Resolve the package type: explicit argument wins, otherwise detect from
