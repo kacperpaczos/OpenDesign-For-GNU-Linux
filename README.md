@@ -1,3 +1,14 @@
+> [!IMPORTANT]
+> **This is the community *packaging* distribution of OpenDesign for GNU/Linux — not the product repository.**
+> At this stage the project is literally just packaging: each **stable upstream release** is taken as-is, a small reviewed series of Linux packaging patches is applied, and CI builds `.deb` / `.rpm` / Flatpak artifacts published in [Releases](https://github.com/kacperpaczos/OpenDesign-For-GNU-Linux/releases). No product code is developed here — and **everything in this fork is destined to go upstream** ([nexu-io/open-design#4368](https://github.com/nexu-io/open-design/issues/4368) tracks the Linux lane).
+>
+> **Install** (verify `sha256sums.txt` first): `sudo dnf install ./open-design_<version>_x86_64.rpm` · `sudo apt install ./open-design_<version>_amd64.deb` · `flatpak --user install ./open-design.flatpak`
+> Build procedure and patch series: [`docs/linux-packages.md`](docs/linux-packages.md). Packages are unsigned; no auto-update.
+>
+> **The product documentation lives below** — exactly as published upstream ([nexu-io/open-design](https://github.com/nexu-io/open-design)).
+
+---
+
 <h1 align="center">OpenDesign: The 1st Collaborative AI Design Agent Workspace</h1>
 
 > ✨ **[Celebrating 100K GitHub stars with OpenDesign Go](https://open-design.ai/pricing/)** — Go credits are doubled: **$8 for your first month, with up to $120 in monthly credits for eligible Design Plan models**. Use them across 10+ models, including GPT-6 Luna, DeepSeek V4.1 Flash, GLM-5.3 Flash-X, and MiMo V2.6 Flash. All personal plans include API access for Codex, Claude Code, DSH, OpenCode, and more.
