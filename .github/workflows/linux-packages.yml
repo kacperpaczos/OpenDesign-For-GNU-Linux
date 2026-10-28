@@ -31,7 +31,7 @@ env:
   # Branch carrying our patch series (cherry-pick SOURCE). When the series is
   # re-cut onto a branch with a different name, update this value in the same
   # change as packaging/linux/SERIES-BASE — see docs/linux-packages.md.
-  SERIES_BRANCH: linux-packages-0.24.1
+  SERIES_BRANCH: linux-packages-0.26.1
 
 jobs:
   detect:
