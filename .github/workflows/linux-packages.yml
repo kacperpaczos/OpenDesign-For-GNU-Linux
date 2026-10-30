@@ -104,9 +104,10 @@ jobs:
           git config user.name "linux-packages bot"
           git config user.email "linux-packages-bot@users.noreply.github.com"
           git remote add upstream https://github.com/nexu-io/open-design.git
-          git fetch --depth 1 upstream "refs/tags/${TAG}:refs/tags/${TAG}"
           # SERIES-BASE carries one comment line; strip it for the range.
           BASE="$(grep -v '^#' packaging/linux/SERIES-BASE | sed -n '1p')"
+          # The fork does not carry upstream base tags; the range needs the BASE ref.
+          git fetch --depth 1 upstream "refs/tags/${TAG}:refs/tags/${TAG}" "refs/tags/${BASE}:refs/tags/${BASE}"
           echo "Patch series range: ${BASE}..origin/${SERIES_BRANCH}"
           git checkout -B linux-build "refs/tags/${TAG}"
           if ! git cherry-pick "${BASE}..origin/${SERIES_BRANCH}"; then
@@ -186,8 +187,9 @@ jobs:
           git config user.name "linux-packages bot"
           git config user.email "linux-packages-bot@users.noreply.github.com"
           git remote add upstream https://github.com/nexu-io/open-design.git
-          git fetch --depth 1 upstream "refs/tags/${TAG}:refs/tags/${TAG}"
           BASE="$(grep -v '^#' packaging/linux/SERIES-BASE | sed -n '1p')"
+          # The fork does not carry upstream base tags; the range needs the BASE ref.
+          git fetch --depth 1 upstream "refs/tags/${TAG}:refs/tags/${TAG}" "refs/tags/${BASE}:refs/tags/${BASE}"
           echo "Patch series range: ${BASE}..origin/${SERIES_BRANCH}"
           git checkout -B linux-build "refs/tags/${TAG}"
           if ! git cherry-pick "${BASE}..origin/${SERIES_BRANCH}"; then
