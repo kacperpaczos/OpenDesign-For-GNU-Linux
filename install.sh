@@ -1,93 +1,232 @@
 #!/bin/sh
 # OpenDesign for GNU/Linux — community installer.
-# Resolves the latest stable release, verifies the sha256 checksum and
-# installs the package for your distribution.
+# Resolves the latest release, verifies its sha256 checksum and installs the
+# package for your distribution, without asking any questions.
 #
-# Usage: curl -fsSL <this script> | sh            (auto-detect deb/rpm)
-#        curl -fsSL <this script> | sh -s deb      (force .deb)
-#        curl -fsSL <this script> | sh -s rpm      (force .rpm)
+# Usage: curl -fsSL <this script> | sh            (auto-detect deb/rpm/flatpak)
+#        curl -fsSL <this script> | sh -s deb      (force .deb, apt-get)
+#        curl -fsSL <this script> | sh -s rpm      (force .rpm, zypper on openSUSE, dnf otherwise)
 #        curl -fsSL <this script> | sh -s flatpak  (Flatpak bundle, user install)
-# Works with curl or wget.
-set -e
+# Works with curl or wget. Download progress is written to stderr.
+#
+# Everything lives in functions and only runs from the last line, so a
+# truncated download never executes half a script, and the shell has read the
+# whole file before any installer starts.
+
+set -eu
+
 REPO="kacperpaczos/OpenDesign-For-GNU-Linux"
-BASE="https://github.com/$REPO/releases/download"
-WANT="${1:-auto}"
+# Overridable for testing only.
+API_URL="${OD_INSTALL_API_URL:-https://api.github.com/repos/$REPO/releases/latest}"
+BASE_URL="${OD_INSTALL_BASE_URL:-https://github.com/$REPO/releases/download}"
 
-say() { printf '\n==> %s\n' "$*"; }
+TMP=""
 
-if command -v curl >/dev/null 2>&1; then
-  fetch() { curl -fsSL "$1"; }
-  fetch_to() { curl -fsSL -o "$2" "$1"; }
-elif command -v wget >/dev/null 2>&1; then
-  fetch() { wget -qO- "$1"; }
-  fetch_to() { wget -qO "$2" "$1"; }
-else
-  echo "curl or wget is required"; exit 1
-fi
+say()  { printf '\n==> %s\n' "$*"; }
+info() { printf '    %s\n' "$*"; }
+die()  { printf 'install.sh: error: %s\n' "$*" >&2; exit 1; }
 
-say "Resolving the latest release"
-TAG=$(fetch "https://api.github.com/repos/$REPO/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1)
-[ -n "$TAG" ] || { echo "Could not resolve the latest release"; exit 1; }
-VERSION=${TAG#open-design-v}
-VERSION=${VERSION%-linux}   # tags are open-design-vX.Y.Z-linux; assets use X.Y.Z
-echo "    $TAG"
+usage() {
+  cat >&2 <<'EOF'
+Usage: curl -fsSL https://kacperpaczos.github.io/OpenDesign-For-GNU-Linux/install.sh | sh -s [deb|rpm|flatpak]
 
-# Resolve the package type: explicit argument wins, otherwise detect from
-# the available package manager.
-if [ "$WANT" = "auto" ]; then
-  if command -v dnf >/dev/null 2>&1; then WANT=rpm
-  elif command -v zypper >/dev/null 2>&1; then WANT=rpm
-  elif command -v apt-get >/dev/null 2>&1; then WANT=deb
-  else WANT=flatpak
-  fi
-fi
-
-TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
-
-fetch_sums() {
-  fetch_to "$BASE/$TAG/sha256sums.txt" "$TMP/sha256sums.txt" || true
+  deb      install the .deb with apt-get
+  rpm      install the .rpm with zypper (openSUSE) or dnf
+  flatpak  install the Flatpak bundle (user installation)
+  (none)   auto-detect from the available package manager
+EOF
 }
 
-verify() {
-  [ -s "$TMP/sha256sums.txt" ] || { echo "    (sha256sums.txt unavailable — skipping verification)"; return 0; }
-  (cd "$TMP" && sed "s|output/||" sha256sums.txt | grep " $1\$" | sha256sum -c -) \
-    || { echo "Checksum mismatch — aborting"; exit 1; }
+cleanup() {
+  if [ -n "$TMP" ]; then rm -rf "$TMP"; fi
 }
 
-if [ "$WANT" = "deb" ] || [ "$WANT" = "rpm" ]; then
-  if [ "$WANT" = "deb" ]; then PKG=apt-get; EXT=deb; ARCH=amd64; else PKG=dnf; EXT=rpm; ARCH=x86_64; fi
-  ASSET="open-design_${VERSION}_${ARCH}.${EXT}"
-  say "Downloading $ASSET"
-  fetch_to "$BASE/$TAG/$ASSET" "$TMP/$ASSET"
-  fetch_sums
-  verify "$ASSET"
-  say "Installing with $PKG (sudo may ask for your password)"
-  if [ "$(id -u)" = "0" ]; then
-    $PKG install -y "$TMP/$ASSET"
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# --- downloads ---------------------------------------------------------------
+
+setup_fetch() {
+  if have curl; then
+    DL=curl
+  elif have wget; then
+    DL=wget
+    WGET_PROGRESS=""
+    if wget --help 2>&1 | grep -q -- '--show-progress'; then
+      WGET_PROGRESS="--show-progress"
+    fi
   else
-    sudo $PKG install -y "$TMP/$ASSET"
+    die "curl or wget is required"
   fi
-  say "Done. Launch 'Open Design' from your application menu."
+}
 
-elif [ "$WANT" = "flatpak" ]; then
-  command -v flatpak >/dev/null 2>&1 || { echo "flatpak is required (install flatpak first)"; exit 1; }
+# fetch URL OUT — small files, no progress.
+fetch() {
+  if [ "$DL" = curl ]; then
+    curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 20 -o "$2" "$1"
+  else
+    wget -q --tries=3 --timeout=20 -O "$2" "$1"
+  fi
+}
+
+# fetch_progress URL OUT — package download, progress bar on stderr.
+fetch_progress() {
+  if [ "$DL" = curl ]; then
+    curl -fL --retry 3 --retry-delay 2 --connect-timeout 20 --progress-bar -o "$2" "$1"
+  else
+    # shellcheck disable=SC2086 # WGET_PROGRESS is empty or a single flag
+    wget -q $WGET_PROGRESS --tries=3 --timeout=20 -O "$2" "$1"
+  fi
+}
+
+# --- release resolution ------------------------------------------------------
+
+resolve_release() {
+  say "Resolving the latest release"
+  fetch "$API_URL" "$TMP/release.json" \
+    || die "could not query the GitHub API for the latest release (network down or rate limited?)"
+  TAG=$(sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' "$TMP/release.json" | head -n 1)
+  [ -n "$TAG" ] || die "could not find a release tag in the GitHub API response"
+  VERSION=${TAG#open-design-v}
+  VERSION=${VERSION%-linux}   # tags are open-design-vX.Y.Z-linux; assets use X.Y.Z
+  info "$TAG"
+}
+
+# --- checksum ----------------------------------------------------------------
+
+sha256_of() {
+  if have sha256sum; then
+    sum=$(sha256sum "$1")
+  elif have shasum; then
+    sum=$(shasum -a 256 "$1")
+  else
+    die "sha256sum (coreutils) or shasum is required to verify the download"
+  fi
+  printf '%s\n' "${sum%% *}"
+}
+
+# download_verified ASSET — downloads ASSET into $TMP and checks it against
+# the release's sha256sums.txt (entries may carry a directory prefix).
+download_verified() {
+  asset=$1
+  say "Downloading $asset"
+  fetch_progress "$BASE_URL/$TAG/$asset" "$TMP/$asset" \
+    || die "download failed: $BASE_URL/$TAG/$asset"
+  fetch "$BASE_URL/$TAG/sha256sums.txt" "$TMP/sha256sums.txt" \
+    || die "download failed: $BASE_URL/$TAG/sha256sums.txt"
+  expected=$(awk -v name="$asset" '{ f = $2; sub(/^\*/, "", f); sub(/.*\//, "", f); if (f == name) { print $1; exit } }' "$TMP/sha256sums.txt")
+  [ -n "$expected" ] || die "sha256sums.txt has no entry for $asset"
+  actual=$(sha256_of "$TMP/$asset")
+  [ "$actual" = "$expected" ] \
+    || die "checksum mismatch for $asset (expected $expected, got $actual)"
+  info "sha256 OK"
+}
+
+# --- installation ------------------------------------------------------------
+
+# run_installer CMD... — never let an installer read the piped script on
+# stdin. With `curl | sh`, stdin is the curl pipe: anything reading it eats
+# the rest of the script, and flatpak's progress table asks the terminal for
+# the cursor position and waits for the reply on stdin, so it never redraws
+# (no progress, stray ^[[..R codes). Give it the terminal when there is one.
+run_installer() {
+  if (: </dev/tty) 2>/dev/null; then
+    "$@" </dev/tty
+  else
+    FLATPAK_FANCY_OUTPUT=0 "$@" </dev/null
+  fi
+}
+
+as_root() {
+  if [ "$(id -u)" = "0" ]; then
+    run_installer "$@"
+  else
+    have sudo || die "sudo is required to install system packages (or run as root)"
+    run_installer sudo "$@"
+  fi
+}
+
+is_opensuse() {
+  [ -r /etc/os-release ] && grep -qiE '^(ID|ID_LIKE)=.*suse' /etc/os-release
+}
+
+install_deb() {
+  have apt-get || die "apt-get is required for the deb package (try: sh -s flatpak)"
+  ASSET="open-design_${VERSION}_amd64.deb"
+  download_verified "$ASSET"
+  chmod 755 "$TMP"; chmod 644 "$TMP/$ASSET"   # readable by apt's _apt sandbox user
+  say "Installing with apt-get (sudo may ask for your password)"
+  as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y "$TMP/$ASSET" \
+    || die "apt-get install failed"
+}
+
+install_rpm() {
+  if have zypper && { is_opensuse || ! have dnf; }; then
+    RPM_TOOL=zypper
+  elif have dnf; then
+    RPM_TOOL=dnf
+  else
+    die "dnf or zypper is required for the rpm package (try: sh -s flatpak)"
+  fi
+  ASSET="open-design_${VERSION}_x86_64.rpm"
+  download_verified "$ASSET"
+  say "Installing with $RPM_TOOL (sudo may ask for your password)"
+  if [ "$RPM_TOOL" = zypper ]; then
+    as_root zypper --non-interactive install --allow-unsigned-rpm "$TMP/$ASSET" \
+      || die "zypper install failed"
+  else
+    as_root dnf install -y "$TMP/$ASSET" || die "dnf install failed"
+  fi
+}
+
+install_flatpak() {
+  have flatpak || die "flatpak is required (install flatpak first)"
   ASSET="open-design.flatpak"
-  say "Downloading $ASSET"
-  fetch_to "$BASE/$TAG/$ASSET" "$TMP/$ASSET"
-  fetch_sums
-  verify "$ASSET"
-  say "Installing the Flatpak bundle (user installation)"
+  download_verified "$ASSET"
   if [ "$(id -u)" = "0" ]; then
-    flatpak install --system -y "$TMP/$ASSET"
+    say "Installing the Flatpak bundle (system installation)"
+    run_installer flatpak install --system --assumeyes --bundle "$TMP/$ASSET" \
+      || die "flatpak install failed"
   else
-    flatpak install --user -y "$TMP/$ASSET"
+    say "Installing the Flatpak bundle (user installation)"
+    run_installer flatpak install --user --assumeyes --bundle "$TMP/$ASSET" \
+      || die "flatpak install failed"
   fi
+}
+
+# --- main --------------------------------------------------------------------
+
+main() {
+  if [ $# -gt 1 ]; then usage; die "expected at most one argument, got $#"; fi
+  WANT="${1:-auto}"
+  case "$WANT" in
+    auto|deb|rpm|flatpak) ;;
+    -h|--help) usage; exit 2 ;;
+    *) usage; die "unknown package type: $WANT (expected deb, rpm or flatpak)" ;;
+  esac
+
+  # Explicit argument wins, otherwise detect from the package manager.
+  if [ "$WANT" = auto ]; then
+    if have dnf || have zypper; then WANT=rpm
+    elif have apt-get; then WANT=deb
+    else WANT=flatpak
+    fi
+  fi
+
+  setup_fetch
+  trap cleanup EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  TMP=$(mktemp -d) || die "could not create a temporary directory"
+
+  resolve_release
+  case "$WANT" in
+    deb) install_deb ;;
+    rpm) install_rpm ;;
+    flatpak) install_flatpak ;;
+  esac
+
   say "Done. Launch 'Open Design' from your application menu."
+  info "Community build — unsigned, no auto-update. Upstream: https://open-design.ai"
+}
 
-else
-  echo "Unknown package type: $WANT (expected deb, rpm or flatpak)"
-  exit 1
-fi
-
-echo "    Community build — unsigned, no auto-update. Upstream: https://open-design.ai"
+main "$@"
