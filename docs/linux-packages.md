@@ -2,7 +2,7 @@
 
 Ten dokument opisuje, jak dla każdego stabilnego wydania upstreamu zbudować pakiety `.deb`, `.rpm` i `.flatpak` dla OpenDesign. Pakiety powstają z tagów upstreamu (`nexu-io/open-design`) z nałożoną naszą serią łatek przez cherry-pick.
 
-**Serie łatek:** commity po tagu bazowym (zapisanym w `packaging/linux/SERIES-BASE`) aż do gałęzi `linux-packages-0.26.1` — domyślnej gałęzi forka `kacperpaczos/open-design`. Obecnie baza to `open-design-v0.26.1`.
+**Serie łatek:** commity po tagu bazowym (zapisanym w `packaging/linux/SERIES-BASE`) aż do gałęzi `linux-packages-0.26.1` — domyślnej gałęzi forka `kacperpaczos/OpenDesign-For-GNU-Linux`. Obecnie baza to `open-design-v0.26.1`.
 
 ## Jak działa automat (CI)
 
@@ -10,7 +10,7 @@ Workflow `.github/workflows/linux-packages.yml`:
 
 1. codziennie o 03:41 UTC (i na żądanie) wyznacza najnowszy tag upstreamu pasujący do `open-design-v*`;
 2. jeśli na forku istnieje już wydanie o nazwie `<tag>-linux`, nic nie robi;
-3. w przeciwnym razie zakłada gałąź `linux-build` na tagu upstreamu i nanosi naszą serię przez cherry-pick z zakresu `"$(grep -v '^#' packaging/linux/SERIES-BASE | sed -n '1p')"..linux-packages-0.26.1`. **Konflikt oznacza, że upstream przepisał łatany obszar** — workflow przerywa pracę z czytelnym komunikatem i trzeba przeciąć serię ręcznie (punkt (b) niżej);
+3. w przeciwnym razie pobiera z upstreamu tag docelowy oraz tag bazowy serii (fork nie przechowuje tagów upstreamu, a zakres cherry-picka potrzebuje referencji bazy), zakłada gałąź `linux-build` na tagu upstreamu i nanosi naszą serię przez cherry-pick z zakresu `"$(grep -v '^#' packaging/linux/SERIES-BASE | sed -n '1p')"..linux-packages-0.26.1`. **Konflikt oznacza, że upstream przepisał łatany obszar** — workflow przerywa pracę z czytelnym komunikatem i trzeba przeciąć serię ręcznie (punkt (b) niżej);
 4. buduje `.deb`, potem `.rpm` (sekwencyjnie, jeden runner); Flatpak buduje osobno, jako best-effort — jego porażka nie blokuje deb/rpm ani wydania;
 5. publikuje wydanie `<tag>-linux` ze wszystkimi artefaktami i notką (co nałożono, jak instalować, znane zastrzeżenia).
 
@@ -18,13 +18,13 @@ Workflow `.github/workflows/linux-packages.yml`:
 
 ```bash
 # automatycznie: najnowszy tag upstreamu
-gh workflow run linux-packages.yml -R kacperpaczos/open-design
+gh workflow run linux-packages.yml -R kacperpaczos/OpenDesign-For-GNU-Linux
 
 # albo konkretny tag
-gh workflow run linux-packages.yml -R kacperpaczos/open-design -f tag=open-design-v0.25.0
+gh workflow run linux-packages.yml -R kacperpaczos/OpenDesign-For-GNU-Linux -f tag=open-design-v0.25.0
 ```
 
-Postęp podglądasz przez `gh run watch` albo zakładkę Actions na forku. Efekt: wydanie `open-design-vX.Y.Z-linux` na `kacperpaczos/open-design`.
+Postęp podglądasz przez `gh run watch` albo zakładkę Actions na forku. Efekt: wydanie `open-design-vX.Y.Z-linux` na `kacperpaczos/OpenDesign-For-GNU-Linux`.
 
 ## (b) Przebudowa lokalna — gdy CI nie wystarcza (np. konflikt cherry-pick)
 
@@ -110,6 +110,9 @@ rpm -qpi ../linux-out/*.rpm | grep -i version
 
 ```bash
 git push -u origin linux-packages-0.25.0
+# tag bazowy serii (ten z SERIES-BASE) też na forka — zabezpieczenie dodatkowe,
+# choć workflow i tak pobiera go z upstreamu
+git push origin refs/tags/open-design-v0.25.0
 ```
 
 Push aktualizuje forka; jeśli nowa gałąź ma zostać domyślną, zmień ją w ustawieniach forka. Kolejne uruchomienie workflow użyje nowej serii.
